@@ -133,7 +133,6 @@ function createAlertCard(alert) {
 
     const statusLabel = getStatusLabel(alert.status);
 
-    // الصور
     let imagesHTML = '';
     if (alert.issueImages && alert.issueImages.length > 0) {
         imagesHTML = `
@@ -148,7 +147,6 @@ function createAlertCard(alert) {
         `;
     }
 
-    // الأزرار حسب الحالة
     let actionButtons = '';
     if (!isResolved) {
         actionButtons = `
@@ -170,7 +168,6 @@ function createAlertCard(alert) {
         `;
     }
 
-    // الملاحظات
     const notesBox = alert.issueNotes ? `
         <div class="issue-notes-box">
             <strong>📝 ملاحظات السائق:</strong>
@@ -342,8 +339,10 @@ modalConfirmBtn.addEventListener('click', function () {
         if (!newDriver) { alert('❌ يجب اختيار السائق'); return; }
         if (!newVehicle) { alert('❌ يجب اختيار المركبة'); return; }
 
+        const newRequestNumber = generateRequestNumber();
+
         const newRequest = {
-            requestNumber: generateRequestNumber(),
+            requestNumber: newRequestNumber,
             requestDate: alert.requestDate,
             requestTime: alert.requestTime,
             department: alert.department,
@@ -375,14 +374,25 @@ modalConfirmBtn.addEventListener('click', function () {
         alert.resolvedAt = now;
         alert.resolvedBy = currentUser.employeeId;
         alert.resolvedByName = currentUser.name;
-        alert.replacementRequestNumber = newRequest.requestNumber;
+        alert.replacementRequestNumber = newRequestNumber;
 
         localStorage.setItem('transportRequests', JSON.stringify(allRequests));
         loadAlerts();
         updateStats();
         renderAlerts();
+
+        // 📜 تسجيل الحدث
+        logAudit('issue', 'إنشاء طلب بديل لبلاغ', newRequestNumber, {
+            newValues: {
+                status: 'معتمد (بديل)',
+                driver: newDriver,
+                vehicle: newVehicle
+            },
+            reason: 'بديل عن البلاغ: ' + alert.requestNumber
+        });
+
         closeModal();
-        showToast('✅ تم إنشاء الطلب البديل: ' + newRequest.requestNumber);
+        showToast('✅ تم إنشاء الطلب البديل: ' + newRequestNumber);
     }
 
     // ============ إغلاق البلاغ ============
@@ -400,6 +410,13 @@ modalConfirmBtn.addEventListener('click', function () {
         loadAlerts();
         updateStats();
         renderAlerts();
+
+        // 📜 تسجيل الحدث
+        logAudit('issue', 'إغلاق بلاغ عطل', alert.requestNumber, {
+            newValues: { status: 'مُعالج' },
+            reason: notes || '(بدون ملاحظات)'
+        });
+
         closeModal();
         showToast('✅ تم إغلاق البلاغ');
     }
