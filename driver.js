@@ -757,4 +757,151 @@ modalConfirmBtn.addEventListener('click', function () {
 
         saveAndRefresh(allRequests);
         closeModal();
-        showToast
+        showToast('📥 تم استلام المهمة بنجاح');
+    }
+
+    else if (currentAction === 'en_route') {
+        trip.status = 'en_route_pickup';
+        trip.statusLabel = 'متوجه للالتقاط';
+        trip.en_route_pickupAt = now;
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🚗 بالتوفيق في طريقك');
+    }
+
+    else if (currentAction === 'start_trip') {
+        trip.status = 'trip_started';
+        trip.statusLabel = 'قيد الرحلة';
+        trip.trip_startedAt = now;
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🚀 تم بدء الرحلة');
+    }
+
+    else if (currentAction === 'arrived') {
+        trip.status = 'at_destination';
+        trip.statusLabel = 'في الوجهة';
+        trip.at_destinationAt = now;
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🎯 وصلت للوجهة');
+    }
+
+    else if (currentAction === 'complete') {
+        const endOdometer = document.getElementById('endOdometer').value;
+        const vehicleCondition = document.getElementById('vehicleCondition').value;
+        const fuelLevelEnd = document.getElementById('fuelLevelEnd').value;
+        const endNotes = document.getElementById('endNotes').value.trim();
+
+        if (!endOdometer) { alert('❌ يجب إدخال عداد الكيلومترات النهائي'); return; }
+        if (!vehicleCondition) { alert('❌ يجب اختيار حالة المركبة'); return; }
+        if (!fuelLevelEnd) { alert('❌ يجب اختيار مستوى الوقود'); return; }
+
+        const startOdo = trip.inspectionStart ? trip.inspectionStart.startOdometer : null;
+        if (startOdo && parseFloat(endOdometer) < startOdo) {
+            alert('❌ قراءة العداد النهائية يجب أن تكون أكبر من أو تساوي الابتدائية');
+            return;
+        }
+
+        let distance = null;
+        if (startOdo) {
+            distance = parseFloat(endOdometer) - startOdo;
+        }
+
+        trip.inspectionEnd = {
+            endOdometer: parseFloat(endOdometer),
+            vehicleCondition: vehicleCondition,
+            fuel: fuelLevelEnd,
+            notes: endNotes || null,
+            inspectedAt: now,
+            inspectedBy: currentUser.employeeId
+        };
+        trip.distance = distance;
+        trip.status = 'completed';
+        trip.statusLabel = 'مكتملة';
+        trip.completedAt = now;
+        trip.completedBy = currentUser.employeeId;
+        trip.completedByName = currentUser.name;
+
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('✅ تم إكمال الطلب بنجاح');
+    }
+
+    // ============ الإبلاغ عن عطل ============
+    else if (currentAction === 'issue') {
+        const issueType = document.getElementById('issueType').value;
+        const issueNotes = document.getElementById('issueNotes').value.trim();
+
+        if (!issueType) { alert('❌ يجب اختيار نوع المشكلة'); return; }
+
+        trip.issueStage = trip.status;
+        trip.status = 'issue_reported';
+        trip.statusLabel = '⚠️ بلاغ عطل';
+        trip.issueType = issueType;
+        trip.issueNotes = issueNotes || null;
+        trip.issueImages = currentIssueImages.length > 0 ? currentIssueImages : null;
+        trip.issueReportedAt = now;
+        trip.issueReportedBy = currentUser.employeeId;
+        trip.issueReportedByName = currentUser.name;
+
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🚨 تم الإبلاغ — جاري إشعار المنفذ');
+    }
+});
+
+// ==================== حفظ وتحديث ====================
+function saveAndRefresh(allRequests) {
+    localStorage.setItem('transportRequests', JSON.stringify(allRequests));
+    loadTrips();
+    updateStats();
+    renderTrips();
+}
+
+// ==================== إشعار سريع ====================
+function showToast(message) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 30px; left: 50%;
+        transform: translateX(-50%);
+        background: #1f2937; color: white;
+        padding: 14px 24px; border-radius: 50px;
+        font-size: 14px; font-weight: 600;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        z-index: 2000; animation: slideUp 0.3s;
+        direction: rtl; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        text-align: center; max-width: 90%;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
+// ==================== الأحداث ====================
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('driverName').textContent = currentUser.name || 'السائق';
+    document.getElementById('driverId').textContent = 'رقم الموظف: ' + (currentUser.employeeId || '-');
+
+    loadTrips();
+    updateStats();
+    renderTrips();
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            renderTrips();
+        });
+    });
+});
+
+// ==================== رجوع ====================
+function goBack() {
+    window.location.href = 'index.html';
+}
