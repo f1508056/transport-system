@@ -198,6 +198,12 @@
                 <div class="desc">سجل العمليات</div>
             </a>
 
+            <a class="menu-card" href="vehicle-history.html" id="vehicleHistoryCard">
+                <div class="icon">🔍</div>
+                <div class="title">سجل المركبات</div>
+                <div class="desc">تتبع تاريخ المركبات</div>
+            </a>
+
             <a class="menu-card" href="#">
                 <div class="icon">📊</div>
                 <div class="title">التقارير</div>
@@ -230,6 +236,12 @@
                 minute: '2-digit'
             });
             document.getElementById('loginTime').textContent = 'وقت الدخول: ' + formattedTime;
+
+            // 🔐 إخفاء بطاقة "سجل المركبات" للسائق
+            if (currentUser.role === 'driver') {
+                const historyCard = document.getElementById('vehicleHistoryCard');
+                if (historyCard) historyCard.style.display = 'none';
+            }
 
             // حساب عدد البلاغات المفتوحة
             const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
