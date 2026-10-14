@@ -11,15 +11,13 @@ const currentUser = JSON.parse(currentUserStr || '{}');
 const requestForm = document.getElementById('requestForm');
 const statusMessage = document.getElementById('statusMessage');
 
-// ==================== تعبئة تلقائية للحقول ====================
+// ==================== تعبئة تلقائية ====================
 window.addEventListener('load', function () {
-    // تعبئة رقم الموظف الطالب تلقائيًا
     const requesterIdInput = document.getElementById('requesterId');
     if (requesterIdInput && currentUser.employeeId) {
         requesterIdInput.value = currentUser.employeeId;
     }
 
-    // تعيين تاريخ اليوم افتراضيًا
     const requestDate = document.getElementById('requestDate');
     if (requestDate) {
         const today = new Date();
@@ -29,7 +27,6 @@ window.addEventListener('load', function () {
         requestDate.value = `${year}-${month}-${day}`;
     }
 
-    // تعيين الوقت الحالي افتراضيًا
     const requestTime = document.getElementById('requestTime');
     if (requestTime) {
         const now = new Date();
@@ -51,33 +48,24 @@ function showStatus(message, type) {
     }
 }
 
-// ==================== معالجة إرسال النموذج ====================
+// ==================== معالجة الإرسال ====================
 requestForm.addEventListener('submit', function (e) {
     e.preventDefault();
 
-    // جمع البيانات
     const formData = {
-        // معلومات الطلب
         requestDate: document.getElementById('requestDate').value,
         requestTime: document.getElementById('requestTime').value,
         department: document.getElementById('department').value.trim(),
         requesterId: document.getElementById('requesterId').value.trim(),
-
-        // مسار الرحلة
         pickupLocation: document.getElementById('pickupLocation').value.trim(),
         destination: document.getElementById('destination').value.trim(),
         passengers: parseInt(document.getElementById('passengers').value),
-
-        // المركبة والسائق
         vehicleType: document.getElementById('vehicleType').value,
         proposedDriver: document.getElementById('proposedDriver').value,
         proposedVehicle: document.getElementById('proposedVehicle').value,
-
-        // التواصل والملاحظات
         contactNumber: document.getElementById('contactNumber').value.trim(),
         notes: document.getElementById('notes').value.trim(),
 
-        // بيانات النظام
         requestNumber: generateRequestNumber(),
         status: 'pending_approval',
         statusLabel: 'بانتظار الاعتماد',
@@ -86,9 +74,7 @@ requestForm.addEventListener('submit', function (e) {
         createdAt: new Date().toISOString()
     };
 
-    // ==================== التحقق من البيانات ====================
-    
-    // التحقق من التاريخ
+    // التحقق
     const selectedDate = new Date(formData.requestDate);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -98,42 +84,40 @@ requestForm.addEventListener('submit', function (e) {
         return;
     }
 
-    // التحقق من رقم التواصل (موجود فقط)
     if (!formData.contactNumber) {
         showStatus('❌ الرجاء إدخال رقم التواصل', 'error');
         return;
     }
 
-    // التحقق من عدد الركاب
     if (formData.passengers < 1) {
         showStatus('❌ عدد الركاب يجب أن يكون 1 على الأقل', 'error');
         return;
     }
 
-    // ==================== الحفظ ====================
-    
+    // الحفظ
     const submitBtn = requestForm.querySelector('.btn-submit');
     submitBtn.disabled = true;
     submitBtn.textContent = 'جاري الحفظ...';
 
     setTimeout(function () {
-        // جلب الطلبات المحفوظة
         const requests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
-        
-        // إضافة الطلب الجديد
         requests.push(formData);
-        
-        // حفظ في المتصفح
         localStorage.setItem('transportRequests', JSON.stringify(requests));
 
-        // عرض رسالة نجاح
+        // 📜 تسجيل الحدث
+        logAudit('request', 'إنشاء طلب نقل جديد', formData.requestNumber, {
+            newValues: {
+                status: 'بانتظار الاعتماد',
+                date: formData.requestDate,
+                time: formData.requestTime
+            }
+        });
+
         showStatus('✅ تم حفظ الطلب بنجاح! رقم الطلب: ' + formData.requestNumber, 'success');
 
-        // إعادة الزر
         submitBtn.disabled = false;
         submitBtn.textContent = '💾 حفظ الطلب';
 
-        // إعادة تعيين النموذج بعد 2 ثانية
         setTimeout(function () {
             document.getElementById('pickupLocation').value = '';
             document.getElementById('destination').value = '';
