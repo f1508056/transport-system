@@ -113,12 +113,12 @@ function createRequestCard(request) {
 
     const statusLabel = getStatusLabel(request.status);
 
-    // ============ تحقق من وجود سائق ومركبة ============
+    // تحقق من وجود سائق ومركبة
     const hasDriver = !!request.assignedDriver;
     const hasVehicle = !!request.assignedVehicle;
     const isReadyToApprove = hasDriver && hasVehicle;
 
-    // ============ عرض بيانات التعيين (لو موجودة) ============
+    // عرض بيانات التعيين (لو موجودة)
     let assignmentInfo = '';
     if (hasDriver || hasVehicle) {
         assignmentInfo = `
@@ -130,14 +130,14 @@ function createRequestCard(request) {
         `;
     }
 
-    // ============ ملاحظة السبب ============
+    // ملاحظة السبب
     const reasonNote = request.reason ? `
         <div style="background: #fef3c7; padding: 10px 14px; border-radius: 10px; margin-top: 12px; font-size: 13px; color: #92400e;">
             <strong>📝 السبب:</strong> ${request.reason}
         </div>
     ` : '';
 
-    // ============ أزرار الإجراءات (للطلبات المعلقة) ============
+    // أزرار الإجراءات (للطلبات المعلقة)
     let actionButtons = '';
     if (request.status === 'pending_approval') {
         // زر الاعتماد: يظهر بس لو فيه سائق ومركبة
@@ -250,7 +250,6 @@ function openModal(action, requestNumber) {
     const request = allRequests.find(r => r.requestNumber === requestNumber);
     if (!request) return;
 
-    // تعيين العنوان
     const titles = {
         'approve': '✅ اعتماد الطلب',
         'return': '↩️ إعادة الطلب للتعديل',
@@ -259,7 +258,6 @@ function openModal(action, requestNumber) {
     };
     modalTitle.textContent = titles[action] || 'إجراء';
 
-    // ============ بناء المحتوى ============
     let bodyHTML = `
         <div class="request-info-box">${request.requestNumber}</div>
     `;
@@ -276,15 +274,12 @@ function openModal(action, requestNumber) {
         modalConfirmBtn.textContent = '✅ نعم، اعتمد';
     }
     else if (action === 'edit') {
-        // ============ نافذة التعديل ============
-        // بناء قائمة السائقين
         const driverOptions = AVAILABLE_DRIVERS.map(d => 
             `<option value="${d.id}" ${request.assignedDriver === d.id ? 'selected' : ''}>
                 ${d.name} - ${d.id}
             </option>`
         ).join('');
 
-        // بناء قائمة المركبات
         const vehicleOptions = AVAILABLE_VEHICLES.map(v => 
             `<option value="${v.number}" ${request.assignedVehicle === v.number ? 'selected' : ''}>
                 ${v.number} - ${v.name} (${v.type})
@@ -314,8 +309,8 @@ function openModal(action, requestNumber) {
                 ${vehicleOptions}
             </select>
 
-            <label>📝 سبب التعديل <span class="required">*</span></label>
-            <textarea id="editReason" placeholder="اكتب سبب التعديل (إلزامي)" style="margin-bottom: 0;"></textarea>
+            <label>📝 سبب التعديل (اختياري)</label>
+            <textarea id="editReason" placeholder="اكتب سبب التعديل..." style="margin-bottom: 0;"></textarea>
         `;
         modalConfirmBtn.className = 'btn-confirm';
         modalConfirmBtn.style.background = '#f59e0b';
@@ -365,7 +360,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
     // ==================== اعتماد ====================
     if (currentAction === 'approve') {
-        // تحقق نهائي
         if (!request.assignedDriver || !request.assignedVehicle) {
             alert('❌ لا يمكن الاعتماد: يجب تحديد السائق والمركبة أولاً');
             return;
@@ -390,12 +384,11 @@ modalConfirmBtn.addEventListener('click', function () {
         const newVehicle = document.getElementById('editVehicle').value;
         const reason = document.getElementById('editReason').value.trim();
 
-        // التحقق من الإلزامي
+        // التحقق من الإلزامي (سبب التعديل اختياري)
         if (!newDate) { alert('❌ يجب تحديد تاريخ التنفيذ'); return; }
         if (!newTime) { alert('❌ يجب تحديد وقت التنفيذ'); return; }
         if (!newDriver) { alert('❌ يجب اختيار السائق'); return; }
         if (!newVehicle) { alert('❌ يجب اختيار المركبة'); return; }
-        if (!reason) { alert('❌ يجب إدخال سبب التعديل'); return; }
 
         // حفظ القيم القديمة للسجل
         const oldValues = {
@@ -417,7 +410,7 @@ modalConfirmBtn.addEventListener('click', function () {
             editedBy: currentUser.employeeId,
             editedByName: currentUser.name,
             editedAt: new Date().toISOString(),
-            reason: reason,
+            reason: reason || '(بدون سبب)',
             oldValues: oldValues,
             newValues: { date: newDate, time: newTime, driver: newDriver, vehicle: newVehicle }
         });
