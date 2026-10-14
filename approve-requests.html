@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اعتماد الطلبات - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="approve-requests.css">
+</head>
+<body>
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <button class="btn-back" onclick="goBack()">←</button>
+        <h1>اعتماد الطلبات</h1>
+        <div class="spacer"></div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="container">
+        
+        <!-- إحصائيات -->
+        <div class="stats-bar">
+            <div class="stat-box pending">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="stat-label">بانتظار الاعتماد</div>
+            </div>
+            <div class="stat-box approved">
+                <div class="stat-number" id="approvedCount">0</div>
+                <div class="stat-label">معتمدة</div>
+            </div>
+            <div class="stat-box returned">
+                <div class="stat-number" id="returnedCount">0</div>
+                <div class="stat-label">معادة للتعديل</div>
+            </div>
+        </div>
+
+        <!-- أزرار التصفية -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="pending_approval">
+                بانتظار الاعتماد
+            </button>
+            <button class="filter-btn" data-filter="approved">معتمدة</button>
+            <button class="filter-btn" data-filter="returned">معادة</button>
+            <button class="filter-btn" data-filter="cancelled">ملغاة</button>
+            <button class="filter-btn" data-filter="all">الكل</button>
+        </div>
+
+        <!-- قائمة الطلبات -->
+        <div id="requestsList" class="requests-list">
+            <!-- يتم تعبئتها بالجافاسكربت -->
+        </div>
+
+        <!-- حالة فاضية -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">✅</div>
+            <h2>لا يوجد طلبات</h2>
+            <p id="emptyMessage">لا يوجد طلبات بانتظار الاعتماد حالياً</p>
+        </div>
+
+    </main>
+
+    <!-- نافذة منبثقة للاعتماد -->
+    <div id="modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">اعتماد الطلب</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- يتم تعبئتها بالجافاسكربت -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">إلغاء</button>
+                <button class="btn-confirm" id="modalConfirmBtn">تأكيد</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="approve-requests.js"></script>
+</body>
+</html>
