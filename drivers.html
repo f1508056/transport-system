@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>السائقون - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="drivers.css">
+</head>
+<body>
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <button class="btn-back" onclick="goBack()">←</button>
+        <h1>👤 السائقون</h1>
+        <div class="spacer"></div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="container">
+        
+        <!-- الإحصائيات -->
+        <div class="stats-bar">
+            <div class="stat-box total">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">إجمالي السائقين</div>
+            </div>
+            <div class="stat-box active">
+                <div class="stat-number" id="activeCount">0</div>
+                <div class="stat-label">نشط</div>
+            </div>
+            <div class="stat-box inactive">
+                <div class="stat-number" id="inactiveCount">0</div>
+                <div class="stat-label">غير نشط</div>
+            </div>
+        </div>
+
+        <!-- زر إضافة سائق -->
+        <button class="btn-add-new" onclick="openAddModal()">
+            ➕ إضافة سائق جديد
+        </button>
+
+        <!-- البحث -->
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="🔍 ابحث بالاسم أو رقم الموظف..."
+            >
+        </div>
+
+        <!-- قائمة السائقين -->
+        <div id="driversList" class="drivers-list">
+            <!-- يتم تعبئتها بالجافاسكربت -->
+        </div>
+
+        <!-- حالة فاضية -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">👤</div>
+            <h2>لا يوجد سائقون</h2>
+            <p>ابدأ بإضافة سائق جديد</p>
+        </div>
+
+    </main>
+
+    <!-- نافذة الإضافة / التعديل -->
+    <div id="modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">إضافة سائق جديد</h3>
+                <button class="modal-close" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- يتم تعبئتها بالجافاسكربت -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">إلغاء</button>
+                <button class="btn-confirm" id="modalConfirmBtn">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="drivers.js"></script>
+</body>
+</html>
