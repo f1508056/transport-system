@@ -23,7 +23,6 @@ function loadDriversAndVehicles() {
     if (storedDrivers) {
         AVAILABLE_DRIVERS = JSON.parse(storedDrivers).filter(d => d.active);
     } else {
-        // افتراضي
         AVAILABLE_DRIVERS = [
             { id: '4001', name: 'سعد السائق', active: true },
             { id: '4002', name: 'فهد السائق', active: true },
@@ -35,7 +34,7 @@ function loadDriversAndVehicles() {
     const storedVehicles = localStorage.getItem('transportVehicles');
     if (storedVehicles) {
         AVAILABLE_VEHICLES = JSON.parse(storedVehicles)
-            .filter(v => v.status === 'Available')  // ✅ فقط المتاحة
+            .filter(v => v.status === 'Available')
             .map(v => ({
                 number: v.number,
                 name: ((v.make || '') + ' ' + (v.model || '')).trim() || v.number,
@@ -43,7 +42,6 @@ function loadDriversAndVehicles() {
                 plate: v.plate
             }));
     } else {
-        // افتراضي
         AVAILABLE_VEHICLES = [
             { number: 'V001', name: 'تويوتا كامري', type: 'Sedan' },
             { number: 'V002', name: 'هيونداي توسان', type: 'SUV' },
@@ -126,14 +124,6 @@ function buildAlertsBar() {
 
     bar.addEventListener('click', () => {
         window.location.href = 'alerts.html';
-    });
-
-    bar.addEventListener('mouseenter', () => {
-        bar.style.transform = 'scale(1.02)';
-    });
-
-    bar.addEventListener('mouseleave', () => {
-        bar.style.transform = 'scale(1)';
     });
 
     const container = document.querySelector('.container');
@@ -373,17 +363,14 @@ function openModal(action, requestNumber) {
         modalConfirmBtn.textContent = '✅ نعم، اعتمد';
     }
     else if (action === 'edit') {
-        // السائقين
         const driverOptions = AVAILABLE_DRIVERS.map(d => 
             `<option value="${d.id}" ${request.assignedDriver === d.id ? 'selected' : ''}>${d.name} - ${d.id}</option>`
         ).join('');
 
-        // المركبات — المتاحة فقط
         let vehicleOptions = AVAILABLE_VEHICLES.map(v => 
             `<option value="${v.number}" ${request.assignedVehicle === v.number ? 'selected' : ''}>${v.number} - ${v.name} (${v.type})</option>`
         ).join('');
 
-        // لو المركبة المعيّنة حاليًا ليست في القائمة (لأنها غير متاحة)
         if (request.assignedVehicle && !AVAILABLE_VEHICLES.find(v => v.number === request.assignedVehicle)) {
             vehicleOptions = `<option value="${request.assignedVehicle}" selected>${request.assignedVehicle} - ⚠️ (غير متاحة حالياً)</option>` + vehicleOptions;
         }
@@ -465,6 +452,16 @@ modalConfirmBtn.addEventListener('click', function () {
         request.approvedBy = currentUser.employeeId;
         request.approvedByName = currentUser.name;
         request.approvedAt = new Date().toISOString();
+
+        // 📜 تسجيل الحدث
+        logAudit('approval', 'اعتماد طلب نقل', request.requestNumber, {
+            newValues: {
+                status: 'معتمد',
+                driver: request.assignedDriver,
+                vehicle: request.assignedVehicle
+            }
+        });
+
         saveAndRefresh();
         closeModal();
         showToast('✅ تم اعتماد الطلب بنجاح');
@@ -501,6 +498,18 @@ modalConfirmBtn.addEventListener('click', function () {
             newValues: { date: newDate, time: newTime, driver: newDriver, vehicle: newVehicle }
         });
 
+        // 📜 تسجيل الحدث
+        logAudit('approval', 'تعديل طلب نقل', request.requestNumber, {
+            reason: reason || '(بدون سبب)',
+            oldValues: oldValues,
+            newValues: { 
+                date: newDate, 
+                time: newTime, 
+                driver: newDriver, 
+                vehicle: newVehicle 
+            }
+        });
+
         saveAndRefresh();
         closeModal();
         showToast('✏️ تم حفظ التعديلات بنجاح');
@@ -514,6 +523,13 @@ modalConfirmBtn.addEventListener('click', function () {
         request.returnedBy = currentUser.employeeId;
         request.returnedByName = currentUser.name;
         request.returnedAt = new Date().toISOString();
+
+        // 📜 تسجيل الحدث
+        logAudit('approval', 'إعادة طلب للتعديل', request.requestNumber, {
+            reason: reason,
+            newValues: { status: 'معاد للتعديل' }
+        });
+
         saveAndRefresh();
         closeModal();
         showToast('↩️ تم إعادة الطلب للتعديل');
@@ -527,6 +543,13 @@ modalConfirmBtn.addEventListener('click', function () {
         request.cancelledBy = currentUser.employeeId;
         request.cancelledByName = currentUser.name;
         request.cancelledAt = new Date().toISOString();
+
+        // 📜 تسجيل الحدث
+        logAudit('approval', 'إلغاء طلب نقل', request.requestNumber, {
+            reason: reason,
+            newValues: { status: 'ملغي' }
+        });
+
         saveAndRefresh();
         closeModal();
         showToast('❌ تم إلغاء الطلب');
