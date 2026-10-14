@@ -45,6 +45,7 @@ function loadTrips() {
             r.status === 'en_route_pickup' ||
             r.status === 'trip_started' ||
             r.status === 'at_destination' ||
+            r.status === 'issue_reported' ||
             r.status === 'completed'
         )
     );
@@ -54,14 +55,14 @@ function loadTrips() {
 
 // ==================== تحديث الإحصائيات ====================
 function updateStats() {
-    activeCount.textContent = myTrips.filter(t => t.status !== 'completed').length;
+    activeCount.textContent = myTrips.filter(t => t.status !== 'completed' && t.status !== 'issue_reported').length;
     completedCount.textContent = myTrips.filter(t => t.status === 'completed').length;
 }
 
 // ==================== تصفية ====================
 function getFilteredTrips() {
     if (currentFilter === 'all') return myTrips;
-    if (currentFilter === 'active') return myTrips.filter(t => t.status !== 'completed');
+    if (currentFilter === 'active') return myTrips.filter(t => t.status !== 'completed' && t.status !== 'issue_reported');
     if (currentFilter === 'completed') return myTrips.filter(t => t.status === 'completed');
     return myTrips;
 }
@@ -115,6 +116,7 @@ function getStatusLabel(status) {
         'en_route_pickup': 'متوجه للالتقاط',
         'trip_started': 'قيد الرحلة',
         'at_destination': 'في الوجهة',
+        'issue_reported': '⚠️ بلاغ عطل',
         'completed': 'مكتملة'
     };
     return labels[status] || status;
@@ -122,6 +124,44 @@ function getStatusLabel(status) {
 
 // ==================== Timeline ====================
 function buildTimeline(trip) {
+    // في حالة البلاغ - عرض Timeline مختصر
+    if (trip.status === 'issue_reported') {
+        const currentStageIndex = STAGES.findIndex(s => s.key === trip.issueStage);
+        
+        return `
+            <div class="timeline">
+                <div class="timeline-title">📊 مراحل الرحلة</div>
+                ${STAGES.map((stage, idx) => {
+                    let cls = '';
+                    let time = '';
+                    
+                    if (idx <= currentStageIndex) {
+                        cls = 'done';
+                        const timeKey = stage.key + 'At';
+                        time = formatTimestamp(trip[timeKey]);
+                    }
+                    
+                    return `
+                        <div class="timeline-item ${cls}">
+                            <div class="timeline-icon">${cls === 'done' ? '✓' : idx + 1}</div>
+                            <div class="timeline-info">
+                                <div class="timeline-label">${stage.icon} ${stage.label}</div>
+                                <div class="timeline-time">${time}</div>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+                <div class="timeline-item current">
+                    <div class="timeline-icon">⚠️</div>
+                    <div class="timeline-info">
+                        <div class="timeline-label">⚠️ تم الإبلاغ عن عطل</div>
+                        <div class="timeline-time">${formatTimestamp(trip.issueReportedAt)}</div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
     const currentStageIndex = STAGES.findIndex(s => s.key === trip.status);
     
     return `
@@ -155,7 +195,7 @@ function buildTimeline(trip) {
     `;
 }
 
-// ==================== ملخص الفحص (يظهر في البطاقة) ====================
+// ==================== ملخص الفحص ====================
 function buildInspectionSummary(trip) {
     if (!trip.inspectionStart && !trip.inspectionEnd) return '';
     
@@ -192,67 +232,74 @@ function buildInspectionSummary(trip) {
     return html;
 }
 
+// ==================== تنبيه العطل في البطاقة ====================
+function buildIssueAlert(trip) {
+    if (trip.status !== 'issue_reported') return '';
+    
+    const issueTypes = {
+        'mechanical': '🔧 عطل ميكانيكي',
+        'electrical': '⚡ عطل كهربائي',
+        'tire': '🛞 إطار مثقوب',
+        'accident': '💥 حادث سير',
+        'fuel': '⛽ نفاد وقود',
+        'other': '❓ أخرى'
+    };
+    
+    return `
+        <div class="issue-alert">
+            <div class="issue-alert-title">⚠️ تم الإبلاغ عن عطل</div>
+            <div class="issue-alert-type">${issueTypes[trip.issueType] || trip.issueType || 'غير محدد'}</div>
+            ${trip.issueNotes ? `<div class="issue-alert-notes">📝 ${trip.issueNotes}</div>` : ''}
+            <div class="issue-alert-time">⏰ ${formatTimestamp(trip.issueReportedAt)}</div>
+            <div class="issue-alert-hint">📢 تم إبلاغ المنفذ — في انتظار الإجراء</div>
+        </div>
+    `;
+}
+
 // ==================== إنشاء بطاقة الرحلة ====================
 function createTripCard(trip) {
     const card = document.createElement('div');
-    card.className = 'trip-card ' + (trip.status === 'completed' ? 'completed' : '');
+    card.className = 'trip-card ' + 
+        (trip.status === 'completed' ? 'completed' : '') +
+        (trip.status === 'issue_reported' ? ' issue-card' : '');
 
     const statusLabel = getStatusLabel(trip.status);
 
     let actionButtons = '';
 
+    // زر البلاغ يظهر في كل المراحل إلا المكتملة والمبلّغ عنها
+    const showIssueButton = trip.status !== 'completed' && trip.status !== 'issue_reported';
+
+    let mainAction = '';
     if (trip.status === 'approved') {
-        actionButtons = `
-            <div class="trip-actions">
-                <button class="btn-trip btn-accept" onclick="openModal('accept', '${trip.requestNumber}')">
-                    📥 استلمت المهمة
-                </button>
-            </div>
-        `;
+        mainAction = `<button class="btn-trip btn-accept" onclick="openModal('accept', '${trip.requestNumber}')">📥 استلمت المهمة</button>`;
     } else if (trip.status === 'accepted') {
-        actionButtons = `
-            <div class="trip-actions">
-                <button class="btn-trip btn-en-route" onclick="openModal('en_route', '${trip.requestNumber}')">
-                    🚗 توجهت للالتقاط
-                </button>
-            </div>
-        `;
+        mainAction = `<button class="btn-trip btn-en-route" onclick="openModal('en_route', '${trip.requestNumber}')">🚗 توجهت للالتقاط</button>`;
     } else if (trip.status === 'en_route_pickup') {
-        actionButtons = `
-            <div class="trip-actions">
-                <button class="btn-trip btn-start-trip" onclick="openModal('start_trip', '${trip.requestNumber}')">
-                    🚀 بدأت الرحلة
-                </button>
-            </div>
-        `;
+        mainAction = `<button class="btn-trip btn-start-trip" onclick="openModal('start_trip', '${trip.requestNumber}')">🚀 بدأت الرحلة</button>`;
     } else if (trip.status === 'trip_started') {
-        actionButtons = `
-            <div class="trip-actions">
-                <button class="btn-trip btn-arrived" onclick="openModal('arrived', '${trip.requestNumber}')">
-                    🎯 وصلت للوجهة
-                </button>
-            </div>
-        `;
+        mainAction = `<button class="btn-trip btn-arrived" onclick="openModal('arrived', '${trip.requestNumber}')">🎯 وصلت للوجهة</button>`;
     } else if (trip.status === 'at_destination') {
+        mainAction = `<button class="btn-trip btn-complete" onclick="openModal('complete', '${trip.requestNumber}')">✅ أكملت الطلب</button>`;
+    }
+
+    if (showIssueButton) {
         actionButtons = `
             <div class="trip-actions">
-                <button class="btn-trip btn-complete" onclick="openModal('complete', '${trip.requestNumber}')">
-                    ✅ أكملت الطلب
+                ${mainAction}
+                <button class="btn-trip btn-issue" onclick="openModal('issue', '${trip.requestNumber}')">
+                    🚨 الإبلاغ عن عطل أو حادث
                 </button>
             </div>
         `;
     } else if (trip.status === 'completed') {
-        actionButtons = `
-            <div class="completed-note">
-                ✅ تم إكمال هذه الرحلة بنجاح
-            </div>
-        `;
+        actionButtons = `<div class="completed-note">✅ تم إكمال هذه الرحلة بنجاح</div>`;
     }
 
     card.innerHTML = `
         <div class="trip-header">
             <div class="trip-number">${trip.requestNumber}</div>
-            <div class="status-badge ${trip.status === 'completed' ? 'completed' : ''}">${statusLabel}</div>
+            <div class="status-badge ${trip.status === 'completed' ? 'completed' : (trip.status === 'issue_reported' ? 'issue' : '')}">${statusLabel}</div>
         </div>
 
         <div class="trip-body">
@@ -290,6 +337,7 @@ function createTripCard(trip) {
             </div>
         </div>
 
+        ${buildIssueAlert(trip)}
         ${buildInspectionSummary(trip)}
         ${buildTimeline(trip)}
         ${actionButtons}
@@ -324,7 +372,7 @@ function renderTrips() {
     });
 }
 
-// ==================== نموذج فحص الاستلام ====================
+// ==================== نماذج النوافذ ====================
 function buildAcceptForm() {
     return `
         <div class="confirm-icon">📥</div>
@@ -389,7 +437,6 @@ function buildAcceptForm() {
     `;
 }
 
-// ==================== نموذج إكمال الطلب ====================
 function buildCompleteForm() {
     return `
         <div class="confirm-icon">✅</div>
@@ -430,6 +477,38 @@ function buildCompleteForm() {
     `;
 }
 
+function buildIssueForm() {
+    return `
+        <div class="confirm-icon" style="color:#ef4444;">🚨</div>
+        <div class="request-info-box">${currentTripNumber}</div>
+        <p style="text-align:center; margin-bottom:18px; color:#ef4444; font-weight:700;">
+            سيتم إيقاف الرحلة وإبلاغ المنفذ فورًا
+        </p>
+
+        <div class="form-section-mini">
+            <label class="form-label-mini">📝 نوع المشكلة <span class="required">*</span></label>
+            <select id="issueType" class="input-mini" required>
+                <option value="">-- اختر نوع المشكلة --</option>
+                <option value="mechanical">🔧 عطل ميكانيكي</option>
+                <option value="electrical">⚡ عطل كهربائي</option>
+                <option value="tire">🛞 إطار مثقوب</option>
+                <option value="accident">💥 حادث سير</option>
+                <option value="fuel">⛽ نفاد وقود</option>
+                <option value="other">❓ أخرى</option>
+            </select>
+        </div>
+
+        <div class="form-section-mini">
+            <label class="form-label-mini">📝 ملاحظات (اختياري)</label>
+            <textarea id="issueNotes" class="input-mini" rows="3" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
+        </div>
+
+        <div style="background:#fee2e2; padding:12px 14px; border-radius:10px; font-size:13px; color:#991b1b; text-align:center;">
+            ⚠️ لن تستطيع إكمال الرحلة بعد الإبلاغ
+        </div>
+    `;
+}
+
 // ==================== فتح النافذة ====================
 function openModal(action, tripNumber) {
     currentAction = action;
@@ -438,7 +517,6 @@ function openModal(action, tripNumber) {
     const trip = myTrips.find(t => t.requestNumber === tripNumber);
     if (!trip) return;
 
-    // ============ استلام المهمة - نموذج كامل ============
     if (action === 'accept') {
         modalTitle.textContent = '📥 استلام المهمة';
         modalBody.innerHTML = buildAcceptForm();
@@ -448,7 +526,6 @@ function openModal(action, tripNumber) {
         return;
     }
 
-    // ============ إكمال الطلب - نموذج كامل ============
     if (action === 'complete') {
         modalTitle.textContent = '✅ إكمال الطلب';
         modalBody.innerHTML = buildCompleteForm();
@@ -458,7 +535,17 @@ function openModal(action, tripNumber) {
         return;
     }
 
-    // ============ باقي المراحل - تأكيد بسيط ============
+    if (action === 'issue') {
+        modalTitle.textContent = '🚨 الإبلاغ عن عطل / حادث';
+        modalBody.innerHTML = buildIssueForm();
+        modalConfirmBtn.className = 'btn-confirm';
+        modalConfirmBtn.style.background = '#ef4444';
+        modalConfirmBtn.textContent = '🚨 تأكيد الإبلاغ';
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // المراحل البسيطة
     const configs = {
         'en_route': {
             title: '🚗 التوجه للالتقاط',
@@ -487,7 +574,6 @@ function openModal(action, tripNumber) {
     if (!cfg) return;
 
     modalTitle.textContent = cfg.title;
-
     modalBody.innerHTML = `
         <div class="confirm-icon">${cfg.icon}</div>
         <div class="request-info-box">${trip.requestNumber}</div>
@@ -496,8 +582,8 @@ function openModal(action, tripNumber) {
             📍 ${trip.pickupLocation} → 🎯 ${trip.destination}
         </p>
     `;
-
     modalConfirmBtn.className = 'btn-confirm ' + cfg.cls;
+    modalConfirmBtn.style.background = '';
     modalConfirmBtn.textContent = cfg.btn;
 
     modal.style.display = 'flex';
@@ -508,6 +594,7 @@ function closeModal() {
     modal.style.display = 'none';
     currentAction = null;
     currentTripNumber = null;
+    modalConfirmBtn.style.background = '';
 }
 
 // ==================== تنفيذ الإجراء ====================
@@ -530,14 +617,12 @@ modalConfirmBtn.addEventListener('click', function () {
         const lights = document.getElementById('lightsStatus').value;
         const previousIssue = document.getElementById('previousIssue').value.trim();
 
-        // التحقق
         if (!startOdometer) { alert('❌ يجب إدخال عداد الكيلومترات'); return; }
         if (!tires) { alert('❌ يجب اختيار حالة الإطارات'); return; }
         if (!fuel) { alert('❌ يجب اختيار مستوى الوقود'); return; }
         if (!cleanliness) { alert('❌ يجب اختيار حالة النظافة'); return; }
         if (!lights) { alert('❌ يجب اختيار حالة الأنوار'); return; }
 
-        // حفظ بيانات الفحص
         trip.inspectionStart = {
             startOdometer: parseFloat(startOdometer),
             tires: tires,
@@ -548,7 +633,6 @@ modalConfirmBtn.addEventListener('click', function () {
             inspectedAt: now,
             inspectedBy: currentUser.employeeId
         };
-
         trip.status = 'accepted';
         trip.statusLabel = 'تم الاستلام';
         trip.acceptedAt = now;
@@ -558,7 +642,6 @@ modalConfirmBtn.addEventListener('click', function () {
         showToast('📥 تم استلام المهمة بنجاح');
     }
 
-    // ============ التوجه للالتقاط ============
     else if (currentAction === 'en_route') {
         trip.status = 'en_route_pickup';
         trip.statusLabel = 'متوجه للالتقاط';
@@ -568,52 +651,45 @@ modalConfirmBtn.addEventListener('click', function () {
         showToast('🚗 بالتوفيق في طريقك');
     }
 
-    // ============ بدء الرحلة ============
     else if (currentAction === 'start_trip') {
         trip.status = 'trip_started';
         trip.statusLabel = 'قيد الرحلة';
         trip.trip_startedAt = now;
         saveAndRefresh(allRequests);
         closeModal();
-        showToast('🚀 تم بدء الرحلة، رحلة سعيدة');
+        showToast('🚀 تم بدء الرحلة');
     }
 
-    // ============ الوصول للوجهة ============
     else if (currentAction === 'arrived') {
         trip.status = 'at_destination';
         trip.statusLabel = 'في الوجهة';
         trip.at_destinationAt = now;
         saveAndRefresh(allRequests);
         closeModal();
-        showToast('🎯 وصلت للوجهة بنجاح');
+        showToast('🎯 وصلت للوجهة');
     }
 
-    // ============ إكمال الطلب ============
     else if (currentAction === 'complete') {
         const endOdometer = document.getElementById('endOdometer').value;
         const vehicleCondition = document.getElementById('vehicleCondition').value;
         const fuelLevelEnd = document.getElementById('fuelLevelEnd').value;
         const endNotes = document.getElementById('endNotes').value.trim();
 
-        // التحقق
         if (!endOdometer) { alert('❌ يجب إدخال عداد الكيلومترات النهائي'); return; }
         if (!vehicleCondition) { alert('❌ يجب اختيار حالة المركبة'); return; }
         if (!fuelLevelEnd) { alert('❌ يجب اختيار مستوى الوقود'); return; }
 
-        // التحقق: العداد النهائي >= الابتدائي
         const startOdo = trip.inspectionStart ? trip.inspectionStart.startOdometer : null;
         if (startOdo && parseFloat(endOdometer) < startOdo) {
             alert('❌ قراءة العداد النهائية يجب أن تكون أكبر من أو تساوي الابتدائية');
             return;
         }
 
-        // حساب المسافة
         let distance = null;
         if (startOdo) {
             distance = parseFloat(endOdometer) - startOdo;
         }
 
-        // حفظ بيانات الفحص النهائي
         trip.inspectionEnd = {
             endOdometer: parseFloat(endOdometer),
             vehicleCondition: vehicleCondition,
@@ -622,7 +698,6 @@ modalConfirmBtn.addEventListener('click', function () {
             inspectedAt: now,
             inspectedBy: currentUser.employeeId
         };
-
         trip.distance = distance;
         trip.status = 'completed';
         trip.statusLabel = 'مكتملة';
@@ -633,6 +708,30 @@ modalConfirmBtn.addEventListener('click', function () {
         saveAndRefresh(allRequests);
         closeModal();
         showToast('✅ تم إكمال الطلب بنجاح');
+    }
+
+    // ============ الإبلاغ عن عطل ============
+    else if (currentAction === 'issue') {
+        const issueType = document.getElementById('issueType').value;
+        const issueNotes = document.getElementById('issueNotes').value.trim();
+
+        if (!issueType) { alert('❌ يجب اختيار نوع المشكلة'); return; }
+
+        // حفظ المرحلة اللي كان فيها السائق
+        trip.issueStage = trip.status;
+
+        // تسجيل البلاغ
+        trip.status = 'issue_reported';
+        trip.statusLabel = '⚠️ بلاغ عطل';
+        trip.issueType = issueType;
+        trip.issueNotes = issueNotes || null;
+        trip.issueReportedAt = now;
+        trip.issueReportedBy = currentUser.employeeId;
+        trip.issueReportedByName = currentUser.name;
+
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🚨 تم الإبلاغ — جاري إشعار المنفذ');
     }
 });
 
@@ -660,42 +759,4 @@ function showToast(message) {
         font-weight: 600;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         z-index: 2000;
-        animation: slideUp 0.3s;
-        direction: rtl;
-        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-        text-align: center;
-        max-width: 90%;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
-}
-
-// ==================== الأحداث ====================
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('driverName').textContent = currentUser.name || 'السائق';
-    document.getElementById('driverId').textContent = 'رقم الموظف: ' + (currentUser.employeeId || '-');
-
-    loadTrips();
-    updateStats();
-    renderTrips();
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            currentFilter = this.dataset.filter;
-            renderTrips();
-        });
-    });
-});
-
-// ==================== رجوع ====================
-function goBack() {
-    window.location.href = 'index.html';
-}
+        animation:
