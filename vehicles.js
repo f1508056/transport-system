@@ -12,6 +12,7 @@ let allVehicles = [];
 let currentEditNumber = null;
 let searchQuery = '';
 let currentFilter = 'all';
+let currentImage = null; // صورة المركبة قيد التعديل
 
 // ==================== عناصر الصفحة ====================
 const vehiclesList = document.getElementById('vehiclesList');
@@ -28,11 +29,11 @@ const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 
 // ==================== البيانات الافتراضية ====================
 const DEFAULT_VEHICLES = [
-    { number: 'V001', type: 'Sedan', make: 'تويوتا', model: 'كامري', color: 'أبيض', year: 2023, plate: 'أ ب ج 1234', status: 'Available' },
-    { number: 'V002', type: 'SUV', make: 'هيونداي', model: 'توسان', color: 'أسود', year: 2022, plate: 'د هـ و 5678', status: 'Available' },
-    { number: 'V003', type: 'SUV', make: 'نيسان', model: 'باترول', color: 'فضي', year: 2021, plate: 'ز ح ط 9012', status: 'Available' },
-    { number: 'V004', type: 'Truck', make: 'تويوتا', model: 'هايلكس', color: 'أبيض', year: 2020, plate: 'ي ك ل 3456', status: 'Available' },
-    { number: 'V005', type: 'Bus', make: 'مرسيدس', model: 'سبرينتر', color: 'رمادي', year: 2019, plate: 'م ن س 7890', status: 'Available' }
+    { number: 'V001', type: 'Sedan', make: 'تويوتا', model: 'كامري', color: 'أبيض', year: 2023, plate: 'أ ب ج 1234', status: 'Available', image: null },
+    { number: 'V002', type: 'SUV', make: 'هيونداي', model: 'توسان', color: 'أسود', year: 2022, plate: 'د هـ و 5678', status: 'Available', image: null },
+    { number: 'V003', type: 'SUV', make: 'نيسان', model: 'باترول', color: 'فضي', year: 2021, plate: 'ز ح ط 9012', status: 'Available', image: null },
+    { number: 'V004', type: 'Truck', make: 'تويوتا', model: 'هايلكس', color: 'أبيض', year: 2020, plate: 'ي ك ل 3456', status: 'Available', image: null },
+    { number: 'V005', type: 'Bus', make: 'مرسيدس', model: 'سبرينتر', color: 'رمادي', year: 2019, plate: 'م ن س 7890', status: 'Available', image: null }
 ];
 
 // ==================== تحميل البيانات ====================
@@ -48,7 +49,12 @@ function loadVehicles() {
 }
 
 function saveVehicles() {
-    localStorage.setItem('transportVehicles', JSON.stringify(allVehicles));
+    try {
+        localStorage.setItem('transportVehicles', JSON.stringify(allVehicles));
+    } catch (err) {
+        alert('⚠️ مساحة التخزين ممتلئة. جرب حذف صور بعض المركبات.');
+        console.error(err);
+    }
 }
 
 // ==================== تحديث الإحصائيات ====================
@@ -113,6 +119,39 @@ function getTypeLabel(type) {
     return labels[type] || type;
 }
 
+// ==================== ضغط الصور ====================
+function compressImage(file, maxWidth = 600, quality = 0.6) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
 // ==================== إنشاء بطاقة مركبة ====================
 function createVehicleCard(vehicle) {
     const card = document.createElement('div');
@@ -122,9 +161,14 @@ function createVehicleCard(vehicle) {
     const statusLabel = getStatusLabel(vehicle.status);
     const typeIcon = getTypeIcon(vehicle.type);
 
+    // عرض الصورة أو الأيقونة
+    const imageHTML = vehicle.image
+        ? `<img src="${vehicle.image}" class="vehicle-photo" alt="${vehicle.number}" onclick="viewVehicleImage('${vehicle.number}')">`
+        : `<div class="vehicle-icon">${typeIcon}</div>`;
+
     card.innerHTML = `
         <div class="vehicle-header">
-            <div class="vehicle-icon">${typeIcon}</div>
+            ${imageHTML}
             <div class="vehicle-info">
                 <div class="vehicle-number">${vehicle.number}</div>
                 <div class="vehicle-model">${vehicle.make || ''} ${vehicle.model || ''}</div>
@@ -171,6 +215,22 @@ function createVehicleCard(vehicle) {
     return card;
 }
 
+// ==================== عرض صورة المركبة مكبرة ====================
+function viewVehicleImage(vehicleNumber) {
+    const vehicle = allVehicles.find(v => v.number === vehicleNumber);
+    if (!vehicle || !vehicle.image) return;
+
+    const overlay = document.createElement('div');
+    overlay.className = 'image-lightbox';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <button class="lightbox-close" onclick="this.parentElement.remove()">✕</button>
+        <img src="${vehicle.image}" onclick="event.stopPropagation()">
+        <div class="lightbox-caption">🚗 ${vehicle.number} - ${vehicle.make || ''} ${vehicle.model || ''}</div>
+    `;
+    document.body.appendChild(overlay);
+}
+
 // ==================== عرض المركبات ====================
 function renderVehicles() {
     const filtered = getFilteredVehicles();
@@ -201,11 +261,13 @@ function renderVehicles() {
 // ==================== فتح نافذة الإضافة ====================
 function openAddModal() {
     currentEditNumber = null;
+    currentImage = null;
     modalTitle.textContent = '➕ إضافة مركبة جديدة';
     modalBody.innerHTML = buildVehicleForm();
     modalConfirmBtn.className = 'btn-confirm';
     modalConfirmBtn.textContent = '💾 إضافة';
     modal.style.display = 'flex';
+    bindImageEvents();
 }
 
 // ==================== فتح نافذة التعديل ====================
@@ -214,18 +276,35 @@ function openEditModal(vehicleNumber) {
     if (!vehicle) return;
 
     currentEditNumber = vehicleNumber;
+    currentImage = vehicle.image || null;
     modalTitle.textContent = '✏️ تعديل بيانات المركبة';
     modalBody.innerHTML = buildVehicleForm(vehicle);
     modalConfirmBtn.className = 'btn-confirm';
     modalConfirmBtn.textContent = '💾 حفظ التعديلات';
     modal.style.display = 'flex';
+    bindImageEvents();
 }
 
 // ==================== نموذج المركبة ====================
 function buildVehicleForm(vehicle = null) {
     const isEdit = !!vehicle;
+    const currentImageData = isEdit ? vehicle.image : null;
     
     return `
+        <label>📷 صورة المركبة (اختياري)</label>
+        <div class="vehicle-image-upload">
+            <input type="file" id="vehicleImageInput" accept="image/*" style="display:none;">
+            <div id="imagePreviewBox" class="image-preview-box">
+                ${currentImageData 
+                    ? `<img src="${currentImageData}" alt="صورة المركبة">
+                       <button type="button" class="btn-remove-image" onclick="removeVehicleImage()">✕</button>`
+                    : `<button type="button" class="btn-upload-image" onclick="document.getElementById('vehicleImageInput').click()">
+                           📷 إضافة صورة
+                       </button>`
+                }
+            </div>
+        </div>
+
         <label>🔢 رقم المركبة <span class="required">*</span></label>
         <input type="text" id="vehicleNumber" placeholder="مثال: V001" 
                value="${isEdit ? vehicle.number : ''}" 
@@ -272,6 +351,54 @@ function buildVehicleForm(vehicle = null) {
         <input type="text" id="vehiclePlate" placeholder="مثال: أ ب ج 1234" 
                value="${isEdit ? (vehicle.plate || '') : ''}" required>
     `;
+}
+
+// ==================== ربط أحداث الصور ====================
+function bindImageEvents() {
+    setTimeout(() => {
+        const input = document.getElementById('vehicleImageInput');
+        if (input) {
+            input.addEventListener('change', async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
+                try {
+                    const compressed = await compressImage(file);
+                    currentImage = compressed;
+                    updateImagePreview();
+                } catch (err) {
+                    console.error('خطأ في ضغط الصورة:', err);
+                    alert('❌ فشل تحميل الصورة');
+                }
+                e.target.value = '';
+            });
+        }
+    }, 100);
+}
+
+// ==================== تحديث معاينة الصورة ====================
+function updateImagePreview() {
+    const box = document.getElementById('imagePreviewBox');
+    if (!box) return;
+
+    if (currentImage) {
+        box.innerHTML = `
+            <img src="${currentImage}" alt="صورة المركبة">
+            <button type="button" class="btn-remove-image" onclick="removeVehicleImage()">✕</button>
+        `;
+    } else {
+        box.innerHTML = `
+            <button type="button" class="btn-upload-image" onclick="document.getElementById('vehicleImageInput').click()">
+                📷 إضافة صورة
+            </button>
+        `;
+    }
+}
+
+// ==================== حذف صورة المركبة ====================
+function removeVehicleImage() {
+    currentImage = null;
+    updateImagePreview();
 }
 
 // ==================== فتح نافذة تغيير الحالة ====================
@@ -341,6 +468,7 @@ function openDeleteModal(vehicleNumber) {
 function closeModal() {
     modal.style.display = 'none';
     currentEditNumber = null;
+    currentImage = null;
 }
 
 // ==================== حفظ (إضافة/تعديل/حالة/حذف) ====================
@@ -356,7 +484,6 @@ modalConfirmBtn.addEventListener('click', function () {
         updateStats();
         renderVehicles();
 
-        // 📜 تسجيل الحدث
         logAudit('vehicle', 'حذف مركبة', currentEditNumber, {
             newValues: { 
                 status: 'محذوفة', 
@@ -384,7 +511,6 @@ modalConfirmBtn.addEventListener('click', function () {
         updateStats();
         renderVehicles();
 
-        // 📜 تسجيل الحدث
         logAudit('vehicle', 'تغيير حالة مركبة', currentEditNumber, {
             oldValues: { status: getStatusLabel(oldStatus) },
             newValues: { status: getStatusLabel(vehicle.status) }
@@ -432,6 +558,7 @@ modalConfirmBtn.addEventListener('click', function () {
             year: year ? parseInt(year) : null,
             plate: plate,
             status: 'Available',
+            image: currentImage || null,
             createdAt: new Date().toISOString()
         });
 
@@ -439,7 +566,6 @@ modalConfirmBtn.addEventListener('click', function () {
         updateStats();
         renderVehicles();
 
-        // 📜 تسجيل الحدث
         logAudit('vehicle', 'إضافة مركبة جديدة', number, {
             newValues: { 
                 status: 'متاحة', 
@@ -464,6 +590,7 @@ modalConfirmBtn.addEventListener('click', function () {
         vehicle.color = color || null;
         vehicle.year = year ? parseInt(year) : null;
         vehicle.plate = plate;
+        vehicle.image = currentImage || null;
 
         const newVehicleDesc = (make || '') + ' ' + (model || '') + ' | ' + type + ' | ' + (color || '-') + ' | ' + (year || '-') + ' | ' + plate;
 
@@ -471,7 +598,6 @@ modalConfirmBtn.addEventListener('click', function () {
         updateStats();
         renderVehicles();
 
-        // 📜 تسجيل الحدث
         logAudit('vehicle', 'تعديل بيانات مركبة', currentEditNumber, {
             oldValues: { vehicle: oldVehicleDesc },
             newValues: { vehicle: newVehicleDesc }
