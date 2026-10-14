@@ -214,6 +214,12 @@ body {
     opacity: 0.9;
 }
 
+.trip-card.issue-card {
+    border-right-color: var(--danger);
+    background: #fef2f2;
+    box-shadow: 0 4px 16px rgba(239, 68, 68, 0.2);
+}
+
 @keyframes fadeIn {
     from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
@@ -238,6 +244,10 @@ body {
     direction: ltr;
 }
 
+.trip-card.issue-card .trip-number {
+    color: var(--danger);
+}
+
 .status-badge {
     font-size: 11px;
     font-weight: 700;
@@ -251,6 +261,17 @@ body {
 .status-badge.completed {
     background: #d1fae5;
     color: #065f46;
+}
+
+.status-badge.issue {
+    background: #fee2e2;
+    color: #991b1b;
+    animation: blink 1.5s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
 }
 
 /* جسم البطاقة */
@@ -286,6 +307,65 @@ body {
 .info-item.highlight .info-value {
     color: var(--primary);
     font-weight: 700;
+}
+
+/* ==================== تنبيه العطل في البطاقة ==================== */
+.issue-alert {
+    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    border-right: 5px solid var(--danger);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.15);
+}
+
+.issue-alert-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: #991b1b;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.issue-alert-type {
+    background: var(--white);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #991b1b;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.issue-alert-notes {
+    background: var(--white);
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-size: 13px;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+    line-height: 1.6;
+}
+
+.issue-alert-time {
+    font-size: 12px;
+    color: #991b1b;
+    font-weight: 600;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.issue-alert-hint {
+    font-size: 12px;
+    color: #7f1d1d;
+    text-align: center;
+    font-weight: 700;
+    padding: 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 8px;
 }
 
 /* ==================== ملخص الفحص في البطاقة ==================== */
@@ -527,6 +607,19 @@ body {
     background: #059669;
 }
 
+.btn-issue {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    color: var(--white);
+    border: 2px dashed #fca5a5;
+    margin-top: 4px;
+}
+
+.btn-issue:hover {
+    background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+}
+
 /* ملاحظة الإكمال */
 .completed-note {
     text-align: center;
@@ -654,7 +747,7 @@ body {
     margin-bottom: 16px;
 }
 
-/* ==================== نماذج الفحص داخل النافذة ==================== */
+/* ==================== نماذج الفحص ==================== */
 .form-section-mini {
     margin-bottom: 16px;
 }
