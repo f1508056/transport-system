@@ -1,0 +1,704 @@
+/* ==================== إعدادات عامة ==================== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+:root {
+    --primary: #1e40af;
+    --primary-light: #3b82f6;
+    --accent: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+    --info: #6366f1;
+    --text-dark: #1f2937;
+    --text-light: #6b7280;
+    --bg-light: #f3f4f6;
+    --white: #ffffff;
+    --border: #e5e7eb;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    background: var(--bg-light);
+    color: var(--text-dark);
+    direction: rtl;
+    min-height: 100vh;
+}
+
+/* ==================== الشريط العلوي ==================== */
+.top-bar {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--white);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 4px 12px rgba(30, 64, 175, 0.25);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+.top-bar h1 {
+    font-size: 18px;
+    font-weight: 700;
+    flex: 1;
+    text-align: center;
+}
+
+.top-bar .spacer {
+    width: 40px;
+}
+
+.btn-back {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--white);
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 20px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-back:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* ==================== الحاوية ==================== */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* ==================== الإحصائيات ==================== */
+.stats-bar {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.stat-box {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 14px 6px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-top: 4px solid var(--primary);
+}
+
+.stat-box.total { border-top-color: var(--primary); }
+.stat-box.available { border-top-color: var(--accent); }
+.stat-box.inuse { border-top-color: var(--warning); }
+.stat-box.maintenance { border-top-color: var(--danger); }
+
+.stat-number {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 4px;
+}
+
+.stat-box.available .stat-number { color: var(--accent); }
+.stat-box.inuse .stat-number { color: var(--warning); }
+.stat-box.maintenance .stat-number { color: var(--danger); }
+
+.stat-label {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+/* ==================== زر الإضافة ==================== */
+.btn-add-new {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, var(--accent) 0%, #059669 100%);
+    color: var(--white);
+    border: none;
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+    transition: all 0.2s;
+}
+
+.btn-add-new:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
+}
+
+/* ==================== البحث ==================== */
+.search-box {
+    margin-bottom: 12px;
+}
+
+.search-box input {
+    width: 100%;
+    padding: 14px 16px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--white);
+    color: var(--text-dark);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.search-box input:focus {
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+/* ==================== التصفية ==================== */
+.filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+}
+
+.filter-bar::-webkit-scrollbar {
+    display: none;
+}
+
+.filter-btn {
+    padding: 10px 16px;
+    background: var(--white);
+    color: var(--text-dark);
+    border: 2px solid var(--border);
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.filter-btn.active {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+/* ==================== قائمة المركبات ==================== */
+.vehicles-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.vehicle-card {
+    background: var(--white);
+    border-radius: 16px;
+    padding: 18px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    border-right: 5px solid var(--accent);
+    transition: all 0.2s;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.vehicle-card[data-status="In Use"] {
+    border-right-color: var(--warning);
+}
+
+.vehicle-card[data-status="Maintenance"] {
+    border-right-color: var(--danger);
+}
+
+.vehicle-card[data-status="Out of Service"] {
+    border-right-color: var(--text-light);
+    opacity: 0.7;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* رأس البطاقة */
+.vehicle-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 14px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--border);
+}
+
+.vehicle-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: var(--white);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.vehicle-info {
+    flex: 1;
+}
+
+.vehicle-number {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 3px;
+    font-family: monospace;
+    direction: ltr;
+    text-align: right;
+}
+
+.vehicle-model {
+    font-size: 13px;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+/* شارة الحالة */
+.status-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 5px 12px;
+    border-radius: 50px;
+    white-space: nowrap;
+}
+
+.status-badge[data-status="Available"] {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge[data-status="In Use"] {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge[data-status="Maintenance"] {
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.status-badge[data-status="Out of Service"] {
+    background: #f3f4f6;
+    color: #6b7280;
+}
+
+/* تفاصيل المركبة */
+.vehicle-body {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.info-label {
+    font-size: 11px;
+    color: var(--text-light);
+    font-weight: 600;
+}
+
+.info-value {
+    font-size: 13px;
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.info-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.info-item.plate .info-value {
+    font-family: monospace;
+    direction: ltr;
+    text-align: right;
+    color: var(--primary);
+    font-weight: 700;
+}
+
+/* أزرار الإجراءات */
+.vehicle-actions {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border);
+}
+
+.btn-action {
+    padding: 10px;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+
+.btn-edit {
+    background: var(--warning);
+    color: var(--white);
+}
+
+.btn-edit:hover {
+    background: #d97706;
+    transform: translateY(-2px);
+}
+
+.btn-status {
+    background: var(--info);
+    color: var(--white);
+}
+
+.btn-status:hover {
+    background: #4f46e5;
+    transform: translateY(-2px);
+}
+
+.btn-delete {
+    background: var(--danger);
+    color: var(--white);
+}
+
+.btn-delete:hover {
+    background: #dc2626;
+    transform: translateY(-2px);
+}
+
+/* ==================== حالة فاضية ==================== */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.empty-icon {
+    font-size: 64px;
+    margin-bottom: 16px;
+}
+
+.empty-state h2 {
+    font-size: 20px;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.empty-state p {
+    font-size: 14px;
+    color: var(--text-light);
+}
+
+/* ==================== النافذة المنبثقة ==================== */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s;
+}
+
+.modal-content {
+    background: var(--white);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 450px;
+    max-height: 90vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    color: var(--text-dark);
+    font-weight: 700;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 4px 10px;
+    border-radius: 8px;
+    transition: all 0.2s;
+}
+
+.modal-close:hover {
+    background: var(--bg-light);
+    color: var(--danger);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-body p {
+    font-size: 14px;
+    color: var(--text-dark);
+    line-height: 1.7;
+    margin-bottom: 16px;
+}
+
+.modal-body label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+    margin-top: 14px;
+}
+
+.modal-body label:first-child {
+    margin-top: 0;
+}
+
+.modal-body .required {
+    color: var(--danger);
+}
+
+.modal-body input,
+.modal-body select,
+.modal-body textarea {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--bg-light);
+    color: var(--text-dark);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.modal-body input:focus,
+.modal-body select:focus,
+.modal-body textarea:focus {
+    border-color: var(--primary-light);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+.modal-body .hint {
+    font-size: 12px;
+    color: var(--text-light);
+    margin-top: 4px;
+    display: block;
+}
+
+/* نموذج من صفين */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.form-row .form-group {
+    margin-top: 14px;
+}
+
+.form-row .form-group label {
+    margin-top: 0;
+}
+
+/* ==================== حالة المركبة (radio) ==================== */
+.status-options {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.status-option {
+    position: relative;
+}
+
+.status-option input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.status-option label {
+    display: block;
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin: 0;
+    background: var(--bg-light);
+}
+
+.status-option input[type="radio"]:checked + label {
+    background: var(--primary);
+    color: var(--white);
+    border-color: var(--primary);
+}
+
+.status-option input[type="radio"]:checked + label.available {
+    background: var(--accent);
+    border-color: var(--accent);
+}
+
+.status-option input[type="radio"]:checked + label.inuse {
+    background: var(--warning);
+    border-color: var(--warning);
+}
+
+.status-option input[type="radio"]:checked + label.maintenance {
+    background: var(--danger);
+    border-color: var(--danger);
+}
+
+.status-option input[type="radio"]:checked + label.out {
+    background: var(--text-light);
+    border-color: var(--text-light);
+}
+
+.modal-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 10px;
+}
+
+.btn-cancel, .btn-confirm {
+    padding: 14px;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel {
+    background: var(--bg-light);
+    color: var(--text-dark);
+    border: 2px solid var(--border);
+}
+
+.btn-cancel:hover {
+    background: #e5e7eb;
+}
+
+.btn-confirm {
+    background: var(--accent);
+    color: var(--white);
+}
+
+.btn-confirm:hover {
+    background: #059669;
+    transform: translateY(-2px);
+}
+
+.btn-confirm.danger {
+    background: var(--danger);
+}
+
+.btn-confirm.danger:hover {
+    background: #dc2626;
+}
+
+/* ==================== الجوال ==================== */
+@media (max-width: 480px) {
+    .container {
+        padding: 14px;
+    }
+
+    .stats-bar {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .stat-number {
+        font-size: 20px;
+    }
+
+    .top-bar h1 {
+        font-size: 16px;
+    }
+
+    .vehicle-body {
+        grid-template-columns: 1fr;
+    }
+
+    .vehicle-actions {
+        grid-template-columns: 1fr;
+    }
+
+    .vehicle-actions .btn-action {
+        padding: 12px;
+    }
+
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+
+    .form-row .form-group {
+        margin-top: 14px;
+    }
+}
