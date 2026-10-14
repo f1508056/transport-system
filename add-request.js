@@ -2,7 +2,6 @@
 const currentUserStr = localStorage.getItem('currentUser');
 
 if (!currentUserStr) {
-    // ما فيه مستخدم مسجل → حوّله لصفحة الدخول
     window.location.href = 'login.html';
 }
 
@@ -45,7 +44,6 @@ function showStatus(message, type) {
     statusMessage.textContent = message;
     statusMessage.className = 'status-message show ' + type;
     
-    // إخفاء الرسالة بعد 4 ثواني (لو نجاح)
     if (type === 'success') {
         setTimeout(() => {
             statusMessage.classList.remove('show');
@@ -62,7 +60,7 @@ requestForm.addEventListener('submit', function (e) {
         // معلومات الطلب
         requestDate: document.getElementById('requestDate').value,
         requestTime: document.getElementById('requestTime').value,
-        department: document.getElementById('department').value,
+        department: document.getElementById('department').value.trim(),
         requesterId: document.getElementById('requesterId').value.trim(),
 
         // مسار الرحلة
@@ -72,8 +70,8 @@ requestForm.addEventListener('submit', function (e) {
 
         // المركبة والسائق
         vehicleType: document.getElementById('vehicleType').value,
-        proposedDriver: document.getElementById('valueproposedDriver').value,
-        proposedVehicle: document.getElementById('proposedVehicle').,
+        proposedDriver: document.getElementById('proposedDriver').value,
+        proposedVehicle: document.getElementById('proposedVehicle').value,
 
         // التواصل والملاحظات
         contactNumber: document.getElementById('contactNumber').value.trim(),
@@ -100,9 +98,9 @@ requestForm.addEventListener('submit', function (e) {
         return;
     }
 
-    // التحقق من رقم التواصل
-    if (!/^[0-9]{10}$/.test(formData.contactNumber)) {
-        showStatus('❌ رقم التواصل يجب أن يكون 10 أرقام', 'error');
+    // التحقق من رقم التواصل (موجود فقط)
+    if (!formData.contactNumber) {
+        showStatus('❌ الرجاء إدخال رقم التواصل', 'error');
         return;
     }
 
@@ -118,7 +116,6 @@ requestForm.addEventListener('submit', function (e) {
     submitBtn.disabled = true;
     submitBtn.textContent = 'جاري الحفظ...';
 
-    // محاكاة الحفظ (لاحقًا: إرسال للخادم)
     setTimeout(function () {
         // جلب الطلبات المحفوظة
         const requests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
@@ -138,7 +135,6 @@ requestForm.addEventListener('submit', function (e) {
 
         // إعادة تعيين النموذج بعد 2 ثانية
         setTimeout(function () {
-            // مسح الحقول النصية فقط (نخلي التاريخ والوقت والمستخدم)
             document.getElementById('pickupLocation').value = '';
             document.getElementById('destination').value = '';
             document.getElementById('notes').value = '';
@@ -149,10 +145,8 @@ requestForm.addEventListener('submit', function (e) {
             document.getElementById('proposedDriver').value = '';
             document.getElementById('proposedVehicle').value = '';
 
-            // رجوع لأعلى الصفحة
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            // اختفاء الرسالة
             setTimeout(() => {
                 statusMessage.classList.remove('show');
             }, 2000);
