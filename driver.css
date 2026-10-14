@@ -288,6 +288,66 @@ body {
     font-weight: 700;
 }
 
+/* ==================== ملخص الفحص في البطاقة ==================== */
+.inspection-summary {
+    background: #eff6ff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border-right: 4px solid var(--primary);
+}
+
+.inspection-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.inspection-title:not(:first-child) {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #bfdbfe;
+}
+
+.inspection-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-dark);
+}
+
+.inspection-grid > div {
+    background: var(--white);
+    padding: 8px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+}
+
+.inspection-grid strong {
+    color: var(--primary);
+}
+
+.inspection-odometer {
+    margin-top: 10px;
+    padding: 8px 12px;
+    background: var(--white);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+    text-align: center;
+}
+
+.inspection-odometer strong {
+    color: var(--primary);
+    font-size: 15px;
+}
+
 /* ==================== Timeline ==================== */
 .timeline {
     background: #f9fafb;
@@ -594,6 +654,59 @@ body {
     margin-bottom: 16px;
 }
 
+/* ==================== نماذج الفحص داخل النافذة ==================== */
+.form-section-mini {
+    margin-bottom: 16px;
+}
+
+.form-label-mini {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin-bottom: 8px;
+}
+
+.field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 5px;
+}
+
+.input-mini {
+    width: 100%;
+    padding: 12px 14px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    font-family: inherit;
+    background: var(--bg-light);
+    color: var(--text-dark);
+    outline: none;
+    transition: all 0.2s;
+}
+
+.input-mini:focus {
+    border-color: var(--primary-light);
+    background: var(--white);
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.1);
+}
+
+textarea.input-mini {
+    resize: vertical;
+    min-height: 60px;
+}
+
+.inspection-field {
+    margin-bottom: 12px;
+}
+
+.inspection-field:last-child {
+    margin-bottom: 0;
+}
+
 .modal-footer {
     padding: 16px 20px;
     border-top: 1px solid var(--border);
@@ -698,5 +811,9 @@ body {
         flex-direction: column;
         align-items: flex-start;
         gap: 2px;
+    }
+
+    .inspection-grid {
+        grid-template-columns: 1fr;
     }
 }
