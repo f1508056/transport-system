@@ -67,7 +67,6 @@
             text-decoration: none;
             color: inherit;
             display: block;
-            position: relative;
         }
         .menu-card:hover {
             transform: translateY(-3px);
@@ -145,6 +144,12 @@
                 <div class="desc">عرض الرحلات</div>
             </a>
 
+            <a class="menu-card" href="driver.html">
+                <div class="icon">🚙</div>
+                <div class="title">رحلاتي</div>
+                <div class="desc">رحلات السائق</div>
+            </a>
+
             <a class="menu-card" href="#">
                 <div class="icon">🚗</div>
                 <div class="title">المركبات</div>
@@ -168,12 +173,6 @@
                 <div class="title">تتبع GPS</div>
                 <div class="desc">الرحلات النشطة</div>
             </a>
-
-            <a class="menu-card" href="#">
-                <div class="icon">⚙️</div>
-                <div class="title">الإعدادات</div>
-                <div class="desc">إعدادات النظام</div>
-            </a>
         </div>
 
         <button class="btn-logout" onclick="logout()">
@@ -182,7 +181,6 @@
     </div>
 
     <script>
-        // التحقق من وجود مستخدم مسجل دخول
         const currentUserStr = localStorage.getItem('currentUser');
 
         if (!currentUserStr) {
