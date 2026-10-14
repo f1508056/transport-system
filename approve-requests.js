@@ -13,7 +13,7 @@ let currentFilter = 'pending_approval';
 let currentAction = null;
 let currentRequestNumber = null;
 
-// ==================== تحميل السائقين والمركبات (من التخزين) ====================
+// ==================== تحميل السائقين والمركبات ====================
 let AVAILABLE_DRIVERS = [];
 let AVAILABLE_VEHICLES = [];
 
@@ -30,7 +30,7 @@ function loadDriversAndVehicles() {
         ];
     }
 
-    // المركبات (المتاحة فقط)
+    // المركبات (المتاحة فقط) مع الصور
     const storedVehicles = localStorage.getItem('transportVehicles');
     if (storedVehicles) {
         AVAILABLE_VEHICLES = JSON.parse(storedVehicles)
@@ -39,15 +39,16 @@ function loadDriversAndVehicles() {
                 number: v.number,
                 name: ((v.make || '') + ' ' + (v.model || '')).trim() || v.number,
                 type: v.type,
-                plate: v.plate
+                plate: v.plate,
+                image: v.image || null
             }));
     } else {
         AVAILABLE_VEHICLES = [
-            { number: 'V001', name: 'تويوتا كامري', type: 'Sedan' },
-            { number: 'V002', name: 'هيونداي توسان', type: 'SUV' },
-            { number: 'V003', name: 'نيسان باترول', type: 'SUV' },
-            { number: 'V004', name: 'تويوتا هايلكس', type: 'Truck' },
-            { number: 'V005', name: 'مرسيدس سبرينتر', type: 'Bus' }
+            { number: 'V001', name: 'تويوتا كامري', type: 'Sedan', image: null },
+            { number: 'V002', name: 'هيونداي توسان', type: 'SUV', image: null },
+            { number: 'V003', name: 'نيسان باترول', type: 'SUV', image: null },
+            { number: 'V004', name: 'تويوتا هايلكس', type: 'Truck', image: null },
+            { number: 'V005', name: 'مرسيدس سبرينتر', type: 'Bus', image: null }
         ];
     }
 }
@@ -188,6 +189,12 @@ function getVehicleName(vehicleNumber) {
     return vehicle ? vehicle.name : vehicleNumber;
 }
 
+function getVehicleImage(vehicleNumber) {
+    if (!vehicleNumber) return null;
+    const vehicle = AVAILABLE_VEHICLES.find(v => v.number === vehicleNumber);
+    return vehicle ? vehicle.image : null;
+}
+
 // ==================== إنشاء بطاقة ====================
 function createRequestCard(request) {
     const card = document.createElement('div');
@@ -202,11 +209,20 @@ function createRequestCard(request) {
 
     let assignmentInfo = '';
     if (hasDriver || hasVehicle) {
+        const vehicleImage = hasVehicle ? getVehicleImage(request.assignedVehicle) : null;
+        
         assignmentInfo = `
             <div style="background: #ecfdf5; padding: 12px 14px; border-radius: 10px; margin-top: 12px; border-right: 4px solid #10b981;">
-                <div style="font-size: 12px; color: #065f46; font-weight: 700; margin-bottom: 6px;">✅ تم التعيين</div>
-                ${hasDriver ? `<div style="font-size: 13px; color: #1f2937; margin-bottom: 4px;">👤 السائق: <strong>${getDriverName(request.assignedDriver)}</strong></div>` : ''}
-                ${hasVehicle ? `<div style="font-size: 13px; color: #1f2937;">🚗 المركبة: <strong>${getVehicleName(request.assignedVehicle)}</strong> (${request.assignedVehicle})</div>` : ''}
+                <div style="font-size: 12px; color: #065f46; font-weight: 700; margin-bottom: 8px;">✅ تم التعيين</div>
+                ${hasDriver ? `<div style="font-size: 13px; color: #1f2937; margin-bottom: 6px;">👤 السائق: <strong>${getDriverName(request.assignedDriver)}</strong></div>` : ''}
+                ${hasVehicle ? `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        ${vehicleImage ? `<img src="${vehicleImage}" style="width: 50px; height: 50px; border-radius: 10px; object-fit: cover; border: 2px solid #10b981;">` : ''}
+                        <div style="font-size: 13px; color: #1f2937;">
+                            🚗 المركبة: <strong>${getVehicleName(request.assignedVehicle)}</strong> (${request.assignedVehicle})
+                        </div>
+                    </div>
+                ` : ''}
             </div>
         `;
     }
@@ -352,10 +368,17 @@ function openModal(action, requestNumber) {
     let bodyHTML = `<div class="request-info-box">${request.requestNumber}</div>`;
 
     if (action === 'approve') {
+        const approveVehicleImage = getVehicleImage(request.assignedVehicle);
+        
         bodyHTML += `
             <p>هل أنت متأكد من اعتماد هذا الطلب؟</p>
             <div style="background: #ecfdf5; padding: 12px 14px; border-radius: 10px; font-size: 13px; color: #065f46;">
-                <div style="margin-bottom: 6px;">👤 <strong>السائق:</strong> ${getDriverName(request.assignedDriver)}</div>
+                <div style="margin-bottom: 8px;">👤 <strong>السائق:</strong> ${getDriverName(request.assignedDriver)}</div>
+                ${approveVehicleImage ? `
+                    <div style="margin-bottom: 8px;">
+                        <img src="${approveVehicleImage}" style="width: 100%; max-height: 150px; border-radius: 10px; object-fit: cover; border: 2px solid #10b981;">
+                    </div>
+                ` : ''}
                 <div>🚗 <strong>المركبة:</strong> ${getVehicleName(request.assignedVehicle)} (${request.assignedVehicle})</div>
             </div>
         `;
@@ -375,6 +398,14 @@ function openModal(action, requestNumber) {
             vehicleOptions = `<option value="${request.assignedVehicle}" selected>${request.assignedVehicle} - ⚠️ (غير متاحة حالياً)</option>` + vehicleOptions;
         }
 
+        // معاينة صورة المركبة المختارة
+        const editVehicleImage = getVehicleImage(request.assignedVehicle);
+        const imagePreview = editVehicleImage 
+            ? `<div style="margin-bottom: 14px; text-align: center;">
+                   <img src="${editVehicleImage}" style="max-width: 100%; max-height: 120px; border-radius: 10px; object-fit: cover; border: 2px solid #3b82f6;">
+               </div>`
+            : '';
+
         bodyHTML += `
             <p style="font-size: 13px; color: #6b7280; margin-bottom: 14px;">
                 عدّل البيانات التالية ثم احفظ. <span style="color: #ef4444;">*</span> = إلزامي
@@ -388,6 +419,7 @@ function openModal(action, requestNumber) {
                 <option value="">-- اختر السائق --</option>
                 ${driverOptions}
             </select>
+            ${imagePreview}
             <label>🚗 رقم المركبة <span class="required">*</span></label>
             <select id="editVehicle" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; background: #f3f4f6; margin-bottom: 14px;">
                 <option value="">-- اختر المركبة --</option>
@@ -453,7 +485,6 @@ modalConfirmBtn.addEventListener('click', function () {
         request.approvedByName = currentUser.name;
         request.approvedAt = new Date().toISOString();
 
-        // 📜 تسجيل الحدث
         logAudit('approval', 'اعتماد طلب نقل', request.requestNumber, {
             newValues: {
                 status: 'معتمد',
@@ -498,7 +529,6 @@ modalConfirmBtn.addEventListener('click', function () {
             newValues: { date: newDate, time: newTime, driver: newDriver, vehicle: newVehicle }
         });
 
-        // 📜 تسجيل الحدث
         logAudit('approval', 'تعديل طلب نقل', request.requestNumber, {
             reason: reason || '(بدون سبب)',
             oldValues: oldValues,
@@ -524,7 +554,6 @@ modalConfirmBtn.addEventListener('click', function () {
         request.returnedByName = currentUser.name;
         request.returnedAt = new Date().toISOString();
 
-        // 📜 تسجيل الحدث
         logAudit('approval', 'إعادة طلب للتعديل', request.requestNumber, {
             reason: reason,
             newValues: { status: 'معاد للتعديل' }
@@ -544,7 +573,6 @@ modalConfirmBtn.addEventListener('click', function () {
         request.cancelledByName = currentUser.name;
         request.cancelledAt = new Date().toISOString();
 
-        // 📜 تسجيل الحدث
         logAudit('approval', 'إلغاء طلب نقل', request.requestNumber, {
             reason: reason,
             newValues: { status: 'ملغي' }
