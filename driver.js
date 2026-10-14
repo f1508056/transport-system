@@ -107,7 +107,34 @@ function getVehicleName(vehicleNumber) {
         'V004': 'تويوتا هايلكس',
         'V005': 'مرسيدس سبرينتر'
     };
+    
+    // أولًا: جرب من التخزين (يحتوي على بيانات كاملة)
+    try {
+        const stored = localStorage.getItem('transportVehicles');
+        if (stored) {
+            const allVehicles = JSON.parse(stored);
+            const vehicle = allVehicles.find(v => v.number === vehicleNumber);
+            if (vehicle) {
+                return ((vehicle.make || '') + ' ' + (vehicle.model || '')).trim() || vehicleNumber;
+            }
+        }
+    } catch {}
+    
+    // ثانيًا: من القائمة الافتراضية
     return vehicles[vehicleNumber] || vehicleNumber || '-';
+}
+
+function getVehicleImage(vehicleNumber) {
+    if (!vehicleNumber) return null;
+    try {
+        const stored = localStorage.getItem('transportVehicles');
+        if (!stored) return null;
+        const vehicles = JSON.parse(stored);
+        const vehicle = vehicles.find(v => v.number === vehicleNumber);
+        return vehicle && vehicle.image ? vehicle.image : null;
+    } catch {
+        return null;
+    }
 }
 
 function getStatusLabel(status) {
@@ -268,6 +295,24 @@ function buildIssueAlert(trip) {
     `;
 }
 
+// ==================== عرض صورة المركبة ====================
+function buildVehicleImage(trip) {
+    const img = getVehicleImage(trip.assignedVehicle);
+    if (!img) return '';
+    
+    return `
+        <div class="info-item full-width">
+            <div class="info-label">📷 صورة المركبة</div>
+            <div style="margin-top: 6px;">
+                <img src="${img}" 
+                     style="width: 100%; max-height: 180px; border-radius: 12px; object-fit: cover; border: 2px solid var(--primary); cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"
+                     onclick="viewTripVehicleImage('${trip.requestNumber}')"
+                     alt="صورة المركبة">
+            </div>
+        </div>
+    `;
+}
+
 // ==================== إنشاء بطاقة الرحلة ====================
 function createTripCard(trip) {
     const card = document.createElement('div');
@@ -345,6 +390,7 @@ function createTripCard(trip) {
                 <div class="info-label">🏢 الإدارة</div>
                 <div class="info-value">${trip.department || '-'}</div>
             </div>
+            ${buildVehicleImage(trip)}
         </div>
 
         ${buildIssueAlert(trip)}
@@ -581,7 +627,7 @@ function compressImage(file, maxWidth = 800, quality = 0.7) {
     });
 }
 
-// ==================== عرض صورة مكبرة ====================
+// ==================== عرض صورة مكبرة (للأعطال) ====================
 function viewImage(tripNumber, imageIndex) {
     const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
     const trip = allRequests.find(t => t.requestNumber === tripNumber);
@@ -596,6 +642,28 @@ function viewImage(tripNumber, imageIndex) {
         <button class="lightbox-close" onclick="this.parentElement.remove()">✕</button>
         <img src="${imgSrc}" onclick="event.stopPropagation()">
         <div class="lightbox-counter">${imageIndex + 1} / ${trip.issueImages.length}</div>
+    `;
+    document.body.appendChild(overlay);
+}
+
+// ==================== عرض صورة المركبة مكبرة ====================
+function viewTripVehicleImage(tripNumber) {
+    const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
+    const trip = allRequests.find(t => t.requestNumber === tripNumber);
+    if (!trip) return;
+
+    const vehicleImage = getVehicleImage(trip.assignedVehicle);
+    if (!vehicleImage) return;
+
+    const vehicleName = getVehicleName(trip.assignedVehicle);
+
+    const overlay = document.createElement('div');
+    overlay.className = 'image-lightbox';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <button class="lightbox-close" onclick="this.parentElement.remove()">✕</button>
+        <img src="${vehicleImage}" onclick="event.stopPropagation()">
+        <div class="lightbox-counter">🚗 ${trip.assignedVehicle} - ${vehicleName}</div>
     `;
     document.body.appendChild(overlay);
 }
@@ -754,7 +822,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         logAudit('trip', 'استلام مهمة من السائق', trip.requestNumber, {
             newValues: { status: 'تم الاستلام' }
         });
@@ -769,7 +836,6 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.en_route_pickupAt = now;
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         logAudit('trip', 'السائق متوجه للالتقاط', trip.requestNumber, {
             newValues: { status: 'متوجه للالتقاط' }
         });
@@ -784,7 +850,6 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.trip_startedAt = now;
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         logAudit('trip', 'بدء الرحلة مع الراكب', trip.requestNumber, {
             newValues: { status: 'قيد الرحلة' }
         });
@@ -799,7 +864,6 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.at_destinationAt = now;
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         logAudit('trip', 'الوصول للوجهة', trip.requestNumber, {
             newValues: { status: 'في الوجهة' }
         });
@@ -846,7 +910,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         logAudit('trip', 'إكمال الرحلة والعودة للإدارة', trip.requestNumber, {
             newValues: { 
                 status: 'مكتملة',
@@ -877,7 +940,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
         saveAndRefresh(allRequests);
 
-        // 📜 تسجيل الحدث
         const issueLabels = {
             'mechanical': 'عطل ميكانيكي',
             'electrical': 'عطل كهربائي',
