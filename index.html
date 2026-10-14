@@ -67,6 +67,7 @@
             text-decoration: none;
             color: inherit;
             display: block;
+            position: relative;
         }
         .menu-card:hover {
             transform: translateY(-3px);
@@ -86,6 +87,29 @@
             font-size: 12px;
             color: #6b7280;
             margin-top: 4px;
+        }
+        /* شارة البلاغات */
+        .alert-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 50px;
+            min-width: 22px;
+            text-align: center;
+            animation: pulse-badge 1.5s infinite;
+            display: none;
+        }
+        .alert-badge.show {
+            display: block;
+        }
+        @keyframes pulse-badge {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.15); }
         }
         .btn-logout {
             display: block;
@@ -138,6 +162,13 @@
                 <div class="desc">مراجعة واعتماد</div>
             </a>
 
+            <a class="menu-card" href="alerts.html">
+                <div class="alert-badge" id="alertBadge">0</div>
+                <div class="icon">🚨</div>
+                <div class="title">البلاغات</div>
+                <div class="desc">أعطال وحوادث</div>
+            </a>
+
             <a class="menu-card" href="requests.html">
                 <div class="icon">📅</div>
                 <div class="title">جدول الرحلات</div>
@@ -167,12 +198,6 @@
                 <div class="title">التقارير</div>
                 <div class="desc">إحصائيات وتقارير</div>
             </a>
-
-            <a class="menu-card" href="#">
-                <div class="icon">🗺️</div>
-                <div class="title">تتبع GPS</div>
-                <div class="desc">الرحلات النشطة</div>
-            </a>
         </div>
 
         <button class="btn-logout" onclick="logout()">
@@ -200,6 +225,16 @@
                 minute: '2-digit'
             });
             document.getElementById('loginTime').textContent = 'وقت الدخول: ' + formattedTime;
+
+            // حساب عدد البلاغات المفتوحة
+            const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
+            const openAlerts = allRequests.filter(r => r.status === 'issue_reported').length;
+            
+            const badge = document.getElementById('alertBadge');
+            if (openAlerts > 0) {
+                badge.textContent = openAlerts;
+                badge.classList.add('show');
+            }
         }
 
         function logout() {
