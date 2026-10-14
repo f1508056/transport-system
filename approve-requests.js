@@ -18,7 +18,7 @@ let AVAILABLE_DRIVERS = [];
 let AVAILABLE_VEHICLES = [];
 
 function loadDriversAndVehicles() {
-    // السائقين
+    // السائقين (النشطين فقط)
     const storedDrivers = localStorage.getItem('transportDrivers');
     if (storedDrivers) {
         AVAILABLE_DRIVERS = JSON.parse(storedDrivers).filter(d => d.active);
@@ -31,10 +31,17 @@ function loadDriversAndVehicles() {
         ];
     }
 
-    // المركبات
+    // المركبات (المتاحة فقط)
     const storedVehicles = localStorage.getItem('transportVehicles');
     if (storedVehicles) {
-        AVAILABLE_VEHICLES = JSON.parse(storedVehicles).filter(v => v.active !== false);
+        AVAILABLE_VEHICLES = JSON.parse(storedVehicles)
+            .filter(v => v.status === 'Available')  // ✅ فقط المتاحة
+            .map(v => ({
+                number: v.number,
+                name: ((v.make || '') + ' ' + (v.model || '')).trim() || v.number,
+                type: v.type,
+                plate: v.plate
+            }));
     } else {
         // افتراضي
         AVAILABLE_VEHICLES = [
@@ -366,13 +373,20 @@ function openModal(action, requestNumber) {
         modalConfirmBtn.textContent = '✅ نعم، اعتمد';
     }
     else if (action === 'edit') {
+        // السائقين
         const driverOptions = AVAILABLE_DRIVERS.map(d => 
             `<option value="${d.id}" ${request.assignedDriver === d.id ? 'selected' : ''}>${d.name} - ${d.id}</option>`
         ).join('');
 
-        const vehicleOptions = AVAILABLE_VEHICLES.map(v => 
+        // المركبات — المتاحة فقط
+        let vehicleOptions = AVAILABLE_VEHICLES.map(v => 
             `<option value="${v.number}" ${request.assignedVehicle === v.number ? 'selected' : ''}>${v.number} - ${v.name} (${v.type})</option>`
         ).join('');
+
+        // لو المركبة المعيّنة حاليًا ليست في القائمة (لأنها غير متاحة)
+        if (request.assignedVehicle && !AVAILABLE_VEHICLES.find(v => v.number === request.assignedVehicle)) {
+            vehicleOptions = `<option value="${request.assignedVehicle}" selected>${request.assignedVehicle} - ⚠️ (غير متاحة حالياً)</option>` + vehicleOptions;
+        }
 
         bodyHTML += `
             <p style="font-size: 13px; color: #6b7280; margin-bottom: 14px;">
