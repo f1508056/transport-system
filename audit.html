@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجل التدقيق - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="audit.css">
+</head>
+<body>
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <button class="btn-back" onclick="goBack()">←</button>
+        <h1>📜 سجل التدقيق</h1>
+        <div class="spacer"></div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="container">
+        
+        <!-- الإحصائيات -->
+        <div class="stats-bar">
+            <div class="stat-box total">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">إجمالي الأحداث</div>
+            </div>
+            <div class="stat-box today">
+                <div class="stat-number" id="todayCount">0</div>
+                <div class="stat-label">اليوم</div>
+            </div>
+            <div class="stat-box week">
+                <div class="stat-number" id="weekCount">0</div>
+                <div class="stat-label">آخر 7 أيام</div>
+            </div>
+        </div>
+
+        <!-- البحث -->
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="🔍 ابحث بالمستخدم أو التفاصيل..."
+            >
+        </div>
+
+        <!-- التصفية -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">الكل</button>
+            <button class="filter-btn" data-filter="request">📝 الطلبات</button>
+            <button class="filter-btn" data-filter="approval">✅ الاعتماد</button>
+            <button class="filter-btn" data-filter="driver">👤 السائقين</button>
+            <button class="filter-btn" data-filter="vehicle">🚗 المركبات</button>
+            <button class="filter-btn" data-filter="trip">🚙 الرحلات</button>
+            <button class="filter-btn" data-filter="issue">🚨 البلاغات</button>
+        </div>
+
+        <!-- قائمة السجل -->
+        <div id="auditList" class="audit-list">
+            <!-- يتم تعبئتها بالجافاسكربت -->
+        </div>
+
+        <!-- حالة فاضية -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📜</div>
+            <h2>لا يوجد أحداث</h2>
+            <p id="emptyMessage">لم يتم تسجيل أي عملية بعد</p>
+        </div>
+
+    </main>
+
+    <script src="audit.js"></script>
+</body>
+</html>
