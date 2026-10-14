@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عرض الطلبات - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="requests.css">
+</head>
+<body>
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <button class="btn-back" onclick="goBack()">←</button>
+        <h1>عرض الطلبات</h1>
+        <div class="spacer"></div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="container">
+        
+        <!-- إحصائيات سريعة -->
+        <div class="stats-bar">
+            <div class="stat-box">
+                <div class="stat-number" id="totalCount">0</div>
+                <div class="stat-label">إجمالي الطلبات</div>
+            </div>
+            <div class="stat-box pending">
+                <div class="stat-number" id="pendingCount">0</div>
+                <div class="stat-label">بانتظار الاعتماد</div>
+            </div>
+            <div class="stat-box approved">
+                <div class="stat-number" id="approvedCount">0</div>
+                <div class="stat-label">معتمدة</div>
+            </div>
+        </div>
+
+        <!-- أزرار التصفية -->
+        <div class="filter-bar">
+            <button class="filter-btn active" data-filter="all">الكل</button>
+            <button class="filter-btn" data-filter="pending_approval">بانتظار</button>
+            <button class="filter-btn" data-filter="approved">معتمدة</button>
+            <button class="filter-btn" data-filter="cancelled">ملغاة</button>
+        </div>
+
+        <!-- حقل البحث -->
+        <div class="search-box">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="🔍 ابحث برقم الطلب أو الإدارة..."
+            >
+        </div>
+
+        <!-- قائمة الطلبات -->
+        <div id="requestsList" class="requests-list">
+            <!-- يتم تعبئتها بالجافاسكربت -->
+        </div>
+
+        <!-- رسالة فاضية -->
+        <div id="emptyState" class="empty-state" style="display: none;">
+            <div class="empty-icon">📭</div>
+            <h2>لا يوجد طلبات</h2>
+            <p>لم يتم تسجيل أي طلبات حتى الآن</p>
+            <a href="add-request.html" class="btn-add-new">
+                ➕ إضافة طلب جديد
+            </a>
+        </div>
+
+    </main>
+
+    <script src="requests.js"></script>
+</body>
+</html>
