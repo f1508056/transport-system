@@ -13,7 +13,7 @@ let currentFilter = 'pending_approval';
 let currentAction = null;
 let currentRequestNumber = null;
 
-// قوائم السائقين والمركبات (تجريبية - لاحقًا من قاعدة البيانات)
+// قوائم السائقين والمركبات
 const AVAILABLE_DRIVERS = [
     { id: '4001', name: 'سعد السائق' },
     { id: '4002', name: 'فهد السائق' },
@@ -57,6 +57,68 @@ function updateStats() {
     returnedCount.textContent = returned;
 }
 
+// ==================== الشريط الأحمر للبلاغات ====================
+function buildAlertsBar() {
+    // احذف الشريط القديم لو موجود
+    const oldBar = document.getElementById('alertsBar');
+    if (oldBar) oldBar.remove();
+
+    const openAlerts = allRequests.filter(r => r.status === 'issue_reported').length;
+    if (openAlerts === 0) return;
+
+    const bar = document.createElement('div');
+    bar.id = 'alertsBar';
+    bar.style.cssText = `
+        background: linear-gradient(135deg, #dc2626 0%, #ef4444 100%);
+        color: white;
+        padding: 14px 18px;
+        border-radius: 14px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
+        cursor: pointer;
+        transition: all 0.2s;
+        animation: pulseAlert 2s infinite;
+        direction: rtl;
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+    `;
+
+    bar.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px; flex:1;">
+            <div style="font-size:24px;">🚨</div>
+            <div>
+                <div style="font-size:14px; font-weight:700;">يوجد بلاغات تحتاج إجراء</div>
+                <div style="font-size:12px; opacity:0.9; margin-top:2px;">${openAlerts} بلاغ مفتوح</div>
+            </div>
+        </div>
+        <div style="background:white; color:#dc2626; padding:8px 16px; border-radius:50px; font-size:13px; font-weight:700;">
+            عرض ←
+        </div>
+    `;
+
+    bar.addEventListener('click', () => {
+        window.location.href = 'alerts.html';
+    });
+
+    bar.addEventListener('mouseenter', () => {
+        bar.style.transform = 'scale(1.02)';
+    });
+
+    bar.addEventListener('mouseleave', () => {
+        bar.style.transform = 'scale(1)';
+    });
+
+    // أضف الشريط قبل قائمة الطلبات
+    const container = document.querySelector('.container');
+    const filterBar = document.querySelector('.filter-bar');
+    if (filterBar) {
+        container.insertBefore(bar, filterBar);
+    }
+}
+
 // ==================== تصفية ====================
 function getFilteredRequests() {
     if (currentFilter === 'all') return allRequests;
@@ -88,8 +150,14 @@ function getStatusLabel(status) {
         'approved': 'معتمد',
         'returned': 'معاد للتعديل',
         'cancelled': 'ملغي',
-        'in_progress': 'قيد التنفيذ',
-        'completed': 'مكتمل'
+        'accepted': 'تم الاستلام',
+        'en_route_pickup': 'متوجه للالتقاط',
+        'trip_started': 'قيد الرحلة',
+        'at_destination': 'في الوجهة',
+        'issue_reported': '⚠️ بلاغ عطل',
+        'completed': 'مكتملة',
+        'resolved_closed': 'بلاغ مُعالج',
+        'resolved_replacement': 'بلاغ مُعالج (بديل)'
     };
     return labels[status] || status;
 }
@@ -109,16 +177,16 @@ function getVehicleName(vehicleNumber) {
 // ==================== إنشاء بطاقة ====================
 function createRequestCard(request) {
     const card = document.createElement('div');
-    card.className = 'request-card ' + (request.status || 'pending_approval');
+    let extraClass = '';
+    if (request.status === 'issue_reported') extraClass = ' issue-card';
+    card.className = 'request-card ' + (request.status || 'pending_approval') + extraClass;
 
     const statusLabel = getStatusLabel(request.status);
-
-    // تحقق من وجود سائق ومركبة
     const hasDriver = !!request.assignedDriver;
     const hasVehicle = !!request.assignedVehicle;
     const isReadyToApprove = hasDriver && hasVehicle;
 
-    // عرض بيانات التعيين (لو موجودة)
+    // بيانات التعيين
     let assignmentInfo = '';
     if (hasDriver || hasVehicle) {
         assignmentInfo = `
@@ -130,37 +198,48 @@ function createRequestCard(request) {
         `;
     }
 
-    // ملاحظة السبب
+    // تنبيه البلاغ
+    let issueAlert = '';
+    if (request.status === 'issue_reported') {
+        const issueTypes = {
+            'mechanical': '🔧 عطل ميكانيكي',
+            'electrical': '⚡ عطل كهربائي',
+            'tire': '🛞 إطار مثقوب',
+            'accident': '💥 حادث سير',
+            'fuel': '⛽ نفاد وقود',
+            'other': '❓ أخرى'
+        };
+        issueAlert = `
+            <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-radius: 12px; padding: 14px; margin-top: 12px; border-right: 5px solid #ef4444;">
+                <div style="font-size: 14px; font-weight: 700; color: #991b1b; margin-bottom: 8px;">🚨 بلاغ من السائق</div>
+                <div style="background: white; padding: 8px 12px; border-radius: 8px; font-size: 13px; font-weight: 700; color: #991b1b; text-align: center; margin-bottom: 6px;">
+                    ${issueTypes[request.issueType] || request.issueType || 'غير محدد'}
+                </div>
+                ${request.issueNotes ? `<div style="background: white; padding: 8px 12px; border-radius: 8px; font-size: 12px; color: #1f2937; margin-bottom: 6px;">📝 ${request.issueNotes}</div>` : ''}
+            </div>
+        `;
+    }
+
+    // السبب
     const reasonNote = request.reason ? `
         <div style="background: #fef3c7; padding: 10px 14px; border-radius: 10px; margin-top: 12px; font-size: 13px; color: #92400e;">
             <strong>📝 السبب:</strong> ${request.reason}
         </div>
     ` : '';
 
-    // أزرار الإجراءات (للطلبات المعلقة)
+    // أزرار الإجراءات
     let actionButtons = '';
     if (request.status === 'pending_approval') {
-        // زر الاعتماد: يظهر بس لو فيه سائق ومركبة
         const approveBtn = isReadyToApprove
-            ? `<button class="btn-action btn-approve" onclick="openModal('approve', '${request.requestNumber}')">
-                   ✅ اعتماد
-               </button>`
-            : `<button class="btn-action" style="background: #9ca3af; color: white; cursor: not-allowed;" onclick="alert('⚠️ يجب تحديد السائق والمركبة أولاً')">
-                   ✅ اعتماد
-               </button>`;
+            ? `<button class="btn-action btn-approve" onclick="openModal('approve', '${request.requestNumber}')">✅ اعتماد</button>`
+            : `<button class="btn-action" style="background: #9ca3af; color: white; cursor: not-allowed;" onclick="alert('⚠️ يجب تحديد السائق والمركبة أولاً')">✅ اعتماد</button>`;
 
         actionButtons = `
             <div class="action-buttons" style="grid-template-columns: repeat(4, 1fr);">
-                <button class="btn-action" style="background: #f59e0b; color: white;" onclick="openModal('edit', '${request.requestNumber}')">
-                    ✏️ تعديل
-                </button>
+                <button class="btn-action" style="background: #f59e0b; color: white;" onclick="openModal('edit', '${request.requestNumber}')">✏️ تعديل</button>
                 ${approveBtn}
-                <button class="btn-action btn-return" onclick="openModal('return', '${request.requestNumber}')">
-                    ↩️ إعادة
-                </button>
-                <button class="btn-action btn-cancel-req" onclick="openModal('cancel', '${request.requestNumber}')">
-                    ❌ إلغاء
-                </button>
+                <button class="btn-action btn-return" onclick="openModal('return', '${request.requestNumber}')">↩️ إعادة</button>
+                <button class="btn-action btn-cancel-req" onclick="openModal('cancel', '${request.requestNumber}')">❌ إلغاء</button>
             </div>
         `;
     }
@@ -185,7 +264,7 @@ function createRequestCard(request) {
                 <div class="info-value">${request.department || '-'}</div>
             </div>
             <div class="info-item">
-                <div class="info-label">🚗 نوع المركبة المطلوب</div>
+                <div class="info-label">🚗 نوع المركبة</div>
                 <div class="info-value">${request.vehicleType || '-'}</div>
             </div>
             <div class="info-item full-width">
@@ -207,6 +286,7 @@ function createRequestCard(request) {
         </div>
 
         ${assignmentInfo}
+        ${issueAlert}
         ${reasonNote}
         ${actionButtons}
     `;
@@ -228,6 +308,7 @@ function renderRequests() {
             'approved': 'لا يوجد طلبات معتمدة',
             'returned': 'لا يوجد طلبات معادة',
             'cancelled': 'لا يوجد طلبات ملغاة',
+            'issue_reported': 'لا يوجد بلاغات مفتوحة',
             'all': 'لا يوجد طلبات في النظام'
         };
         document.getElementById('emptyMessage').textContent = messages[currentFilter] || 'لا يوجد طلبات';
@@ -258,9 +339,7 @@ function openModal(action, requestNumber) {
     };
     modalTitle.textContent = titles[action] || 'إجراء';
 
-    let bodyHTML = `
-        <div class="request-info-box">${request.requestNumber}</div>
-    `;
+    let bodyHTML = `<div class="request-info-box">${request.requestNumber}</div>`;
 
     if (action === 'approve') {
         bodyHTML += `
@@ -275,40 +354,31 @@ function openModal(action, requestNumber) {
     }
     else if (action === 'edit') {
         const driverOptions = AVAILABLE_DRIVERS.map(d => 
-            `<option value="${d.id}" ${request.assignedDriver === d.id ? 'selected' : ''}>
-                ${d.name} - ${d.id}
-            </option>`
+            `<option value="${d.id}" ${request.assignedDriver === d.id ? 'selected' : ''}>${d.name} - ${d.id}</option>`
         ).join('');
 
         const vehicleOptions = AVAILABLE_VEHICLES.map(v => 
-            `<option value="${v.number}" ${request.assignedVehicle === v.number ? 'selected' : ''}>
-                ${v.number} - ${v.name} (${v.type})
-            </option>`
+            `<option value="${v.number}" ${request.assignedVehicle === v.number ? 'selected' : ''}>${v.number} - ${v.name} (${v.type})</option>`
         ).join('');
 
         bodyHTML += `
             <p style="font-size: 13px; color: #6b7280; margin-bottom: 14px;">
                 عدّل البيانات التالية ثم احفظ. <span style="color: #ef4444;">*</span> = إلزامي
             </p>
-
             <label>📅 تاريخ التنفيذ <span class="required">*</span></label>
             <input type="date" id="editDate" value="${request.requestDate || ''}" style="margin-bottom: 14px;">
-
             <label>🕐 وقت التنفيذ <span class="required">*</span></label>
             <input type="time" id="editTime" value="${request.requestTime || ''}" style="margin-bottom: 14px;">
-
             <label>👤 السائق المُعيَّن <span class="required">*</span></label>
             <select id="editDriver" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; background: #f3f4f6; margin-bottom: 14px;">
                 <option value="">-- اختر السائق --</option>
                 ${driverOptions}
             </select>
-
             <label>🚗 رقم المركبة <span class="required">*</span></label>
             <select id="editVehicle" style="width: 100%; padding: 12px 14px; border: 2px solid #e5e7eb; border-radius: 10px; font-size: 15px; font-family: inherit; background: #f3f4f6; margin-bottom: 14px;">
                 <option value="">-- اختر المركبة --</option>
                 ${vehicleOptions}
             </select>
-
             <label>📝 سبب التعديل (اختياري)</label>
             <textarea id="editReason" placeholder="اكتب سبب التعديل..." style="margin-bottom: 0;"></textarea>
         `;
@@ -320,7 +390,7 @@ function openModal(action, requestNumber) {
         bodyHTML += `
             <p>سيتم إعادة الطلب للمجدول للتعديل. يرجى إدخال السبب:</p>
             <label>سبب الإعادة <span class="required">*</span></label>
-            <textarea id="reasonInput" placeholder="اكتب سبب الإعادة (مثال: الوقت غير مناسب، البيانات ناقصة...)"></textarea>
+            <textarea id="reasonInput" placeholder="اكتب سبب الإعادة..."></textarea>
         `;
         modalConfirmBtn.className = 'btn-confirm info';
         modalConfirmBtn.style.background = '';
@@ -358,25 +428,20 @@ modalConfirmBtn.addEventListener('click', function () {
 
     const request = allRequests[requestIndex];
 
-    // ==================== اعتماد ====================
     if (currentAction === 'approve') {
         if (!request.assignedDriver || !request.assignedVehicle) {
             alert('❌ لا يمكن الاعتماد: يجب تحديد السائق والمركبة أولاً');
             return;
         }
-
         request.status = 'approved';
         request.statusLabel = 'معتمد';
         request.approvedBy = currentUser.employeeId;
         request.approvedByName = currentUser.name;
         request.approvedAt = new Date().toISOString();
-
         saveAndRefresh();
         closeModal();
         showToast('✅ تم اعتماد الطلب بنجاح');
     }
-
-    // ==================== تعديل ====================
     else if (currentAction === 'edit') {
         const newDate = document.getElementById('editDate').value;
         const newTime = document.getElementById('editTime').value;
@@ -384,27 +449,21 @@ modalConfirmBtn.addEventListener('click', function () {
         const newVehicle = document.getElementById('editVehicle').value;
         const reason = document.getElementById('editReason').value.trim();
 
-        // التحقق من الإلزامي (سبب التعديل اختياري)
         if (!newDate) { alert('❌ يجب تحديد تاريخ التنفيذ'); return; }
         if (!newTime) { alert('❌ يجب تحديد وقت التنفيذ'); return; }
         if (!newDriver) { alert('❌ يجب اختيار السائق'); return; }
         if (!newVehicle) { alert('❌ يجب اختيار المركبة'); return; }
 
-        // حفظ القيم القديمة للسجل
         const oldValues = {
-            date: request.requestDate,
-            time: request.requestTime,
-            driver: request.assignedDriver,
-            vehicle: request.assignedVehicle
+            date: request.requestDate, time: request.requestTime,
+            driver: request.assignedDriver, vehicle: request.assignedVehicle
         };
 
-        // تطبيق التعديلات
         request.requestDate = newDate;
         request.requestTime = newTime;
         request.assignedDriver = newDriver;
         request.assignedVehicle = newVehicle;
 
-        // سجل التعديل
         if (!request.editHistory) request.editHistory = [];
         request.editHistory.push({
             editedBy: currentUser.employeeId,
@@ -419,42 +478,28 @@ modalConfirmBtn.addEventListener('click', function () {
         closeModal();
         showToast('✏️ تم حفظ التعديلات بنجاح');
     }
-
-    // ==================== إعادة ====================
     else if (currentAction === 'return') {
         const reason = document.getElementById('reasonInput').value.trim();
-        if (!reason) {
-            alert('❌ يجب إدخال سبب الإعادة');
-            return;
-        }
-
+        if (!reason) { alert('❌ يجب إدخال سبب الإعادة'); return; }
         request.status = 'returned';
         request.statusLabel = 'معاد للتعديل';
         request.reason = reason;
         request.returnedBy = currentUser.employeeId;
         request.returnedByName = currentUser.name;
         request.returnedAt = new Date().toISOString();
-
         saveAndRefresh();
         closeModal();
         showToast('↩️ تم إعادة الطلب للتعديل');
     }
-
-    // ==================== إلغاء ====================
     else if (currentAction === 'cancel') {
         const reason = document.getElementById('reasonInput').value.trim();
-        if (!reason) {
-            alert('❌ يجب إدخال سبب الإلغاء');
-            return;
-        }
-
+        if (!reason) { alert('❌ يجب إدخال سبب الإلغاء'); return; }
         request.status = 'cancelled';
         request.statusLabel = 'ملغي';
         request.reason = reason;
         request.cancelledBy = currentUser.employeeId;
         request.cancelledByName = currentUser.name;
         request.cancelledAt = new Date().toISOString();
-
         saveAndRefresh();
         closeModal();
         showToast('❌ تم إلغاء الطلب');
@@ -464,7 +509,9 @@ modalConfirmBtn.addEventListener('click', function () {
 // ==================== حفظ وتحديث ====================
 function saveAndRefresh() {
     localStorage.setItem('transportRequests', JSON.stringify(allRequests));
+    loadRequests();
     updateStats();
+    buildAlertsBar();
     renderRequests();
 }
 
@@ -472,25 +519,18 @@ function saveAndRefresh() {
 function showToast(message) {
     const toast = document.createElement('div');
     toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
+        position: fixed; bottom: 30px; left: 50%;
         transform: translateX(-50%);
-        background: #1f2937;
-        color: white;
-        padding: 14px 24px;
-        border-radius: 50px;
-        font-size: 14px;
-        font-weight: 600;
+        background: #1f2937; color: white;
+        padding: 14px 24px; border-radius: 50px;
+        font-size: 14px; font-weight: 600;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        z-index: 2000;
-        animation: slideUp 0.3s;
-        direction: rtl;
-        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        z-index: 2000; animation: slideUp 0.3s;
+        direction: rtl; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        text-align: center; max-width: 90%;
     `;
     toast.textContent = message;
     document.body.appendChild(toast);
-
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.3s';
@@ -502,6 +542,7 @@ function showToast(message) {
 document.addEventListener('DOMContentLoaded', function () {
     loadRequests();
     updateStats();
+    buildAlertsBar();
     renderRequests();
 
     document.querySelectorAll('.filter-btn').forEach(btn => {
