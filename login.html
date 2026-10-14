@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>تسجيل الدخول - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <!-- الشعار -->
+            <div class="logo">
+                <div class="logo-icon">🚗</div>
+                <h1>نظام إدارة النقل</h1>
+                <p class="subtitle">Transport Management System</p>
+            </div>
+
+            <!-- نموذج الدخول -->
+            <form id="loginForm" class="login-form">
+                <div class="form-group">
+                    <label for="employeeId">رقم الموظف</label>
+                    <input 
+                        type="text" 
+                        id="employeeId" 
+                        name="employeeId" 
+                        placeholder="مثال: 1508056" 
+                        required
+                        autocomplete="username"
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="password">كلمة السر</label>
+                    <div class="password-wrapper">
+                        <input 
+                            type="password" 
+                            id="password" 
+                            name="password" 
+                            placeholder="أدخل كلمة السر" 
+                            required
+                            autocomplete="current-password"
+                        >
+                        <button type="button" id="togglePassword" class="toggle-password" aria-label="إظهار كلمة السر">
+                            👁️
+                        </button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="role">نوع المستخدم</label>
+                    <select id="role" name="role" required>
+                        <option value="">-- اختر نوع المستخدم --</option>
+                        <option value="scheduler">Scheduler - المجدول</option>
+                        <option value="dispatcher">Dispatcher - المنفذ</option>
+                        <option value="driver">Driver - السائق</option>
+                        <option value="management">Management - الإدارة</option>
+                        <option value="superuser">Super User - المستخدم الأعلى</option>
+                    </select>
+                </div>
+
+                <div id="errorMessage" class="error-message"></div>
+
+                <button type="submit" class="btn-login">
+                    دخول
+                </button>
+            </form>
+
+            <!-- تذييل -->
+            <div class="login-footer">
+                <p>© 2026 - نظام إدارة وجدولة النقل</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
