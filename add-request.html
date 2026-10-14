@@ -35,17 +35,12 @@
 
                 <div class="form-group">
                     <label for="department">الإدارة الطالبة <span class="required">*</span></label>
-                    <select id="department" required>
-                        <option value="">-- اختر الإدارة --</option>
-                        <option value="HR">الموارد البشرية</option>
-                        <option value="IT">تقنية المعلومات</option>
-                        <option value="FIN">الإدارة المالية</option>
-                        <option value="OPS">العمليات</option>
-                        <option value="MNT">الصيانة</option>
-                        <option value="SEC">الأمن</option>
-                        <option value="MED">الشؤون الطبية</option>
-                        <option value="ADM">الإدارة العامة</option>
-                    </select>
+                    <input 
+                        type="text" 
+                        id="department" 
+                        placeholder="اكتب اسم الإدارة..." 
+                        required
+                    >
                 </div>
 
                 <div class="form-group">
@@ -120,12 +115,9 @@
                     <input 
                         type="tel" 
                         id="contactNumber" 
-                        placeholder="05xxxxxxxx" 
-                        pattern="[0-9]{10}"
-                        maxlength="10"
+                        placeholder="أدخل رقم التواصل" 
                         required
                     >
-                    <small class="hint">10 أرقام فقط</small>
                 </div>
 
                 <div class="form-group">
