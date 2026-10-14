@@ -9,14 +9,23 @@ const currentUser = JSON.parse(currentUserStr || '{}');
 
 // ==================== متغيرات عامة ====================
 let myTrips = [];
-let currentFilter = 'assigned';
+let currentFilter = 'active';
 let currentAction = null;
 let currentTripNumber = null;
+
+// ==================== مراحل الرحلة ====================
+const STAGES = [
+    { key: 'assigned',           label: 'مُسندة إليّ',        icon: '📋' },
+    { key: 'accepted',           label: 'استلمت المهمة',      icon: '📥' },
+    { key: 'en_route_pickup',    label: 'متوجه للالتقاط',     icon: '🚗' },
+    { key: 'trip_started',       label: 'بدأت الرحلة',        icon: '🚀' },
+    { key: 'at_destination',     label: 'وصلت للوجهة',        icon: '🎯' },
+    { key: 'completed',          label: 'أكملت الطلب',        icon: '✅' }
+];
 
 // ==================== عناصر الصفحة ====================
 const tripsList = document.getElementById('tripsList');
 const emptyState = document.getElementById('emptyState');
-const assignedCount = document.getElementById('assignedCount');
 const activeCount = document.getElementById('activeCount');
 const completedCount = document.getElementById('completedCount');
 const modal = document.getElementById('modal');
@@ -28,29 +37,34 @@ const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 function loadTrips() {
     const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
     
-    // تصفية الرحلات المسندة لهذا السائق فقط
+    // تصفية الرحلات المسندة لهذا السائق
     myTrips = allRequests.filter(r => 
-        r.assignedDriver === currentUser.employeeId && 
-        r.status === 'approved' ||  // معتمدة
-        (r.assignedDriver === currentUser.employeeId && r.status === 'in_progress') ||  // قيد التنفيذ
-        (r.assignedDriver === currentUser.employeeId && r.status === 'completed')  // مكتملة
+        r.assignedDriver === currentUser.employeeId &&
+        (
+            r.status === 'approved' ||
+            r.status === 'accepted' ||
+            r.status === 'en_route_pickup' ||
+            r.status === 'trip_started' ||
+            r.status === 'at_destination' ||
+            r.status === 'completed'
+        )
     );
 
-    // ترتيب حسب التاريخ
     myTrips.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }
 
 // ==================== تحديث الإحصائيات ====================
 function updateStats() {
-    assignedCount.textContent = myTrips.filter(t => t.status === 'approved').length;
-    activeCount.textContent = myTrips.filter(t => t.status === 'in_progress').length;
+    activeCount.textContent = myTrips.filter(t => t.status !== 'completed').length;
     completedCount.textContent = myTrips.filter(t => t.status === 'completed').length;
 }
 
 // ==================== تصفية ====================
 function getFilteredTrips() {
     if (currentFilter === 'all') return myTrips;
-    return myTrips.filter(t => t.status === currentFilter);
+    if (currentFilter === 'active') return myTrips.filter(t => t.status !== 'completed');
+    if (currentFilter === 'completed') return myTrips.filter(t => t.status === 'completed');
+    return myTrips;
 }
 
 // ==================== تنسيق ====================
@@ -72,13 +86,16 @@ function formatTime(timeStr) {
     return `${displayHour}:${minutes} ${period}`;
 }
 
-function getStatusLabel(status) {
-    const labels = {
-        'approved': 'جاهزة للبدء',
-        'in_progress': 'قيد التنفيذ',
-        'completed': 'مكتملة'
-    };
-    return labels[status] || status;
+function formatTimestamp(isoStr) {
+    if (!isoStr) return '-';
+    try {
+        const d = new Date(isoStr);
+        const h = d.getHours();
+        const m = String(d.getMinutes()).padStart(2, '0');
+        const period = h >= 12 ? 'م' : 'ص';
+        const displayHour = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+        return `${displayHour}:${m} ${period}`;
+    } catch { return '-'; }
 }
 
 function getVehicleName(vehicleNumber) {
@@ -92,39 +109,108 @@ function getVehicleName(vehicleNumber) {
     return vehicles[vehicleNumber] || vehicleNumber || '-';
 }
 
-// ==================== إنشاء بطاقة ====================
+function getStatusLabel(status) {
+    const labels = {
+        'approved': 'جاهزة للاستلام',
+        'accepted': 'تم الاستلام',
+        'en_route_pickup': 'متوجه للالتقاط',
+        'trip_started': 'قيد الرحلة',
+        'at_destination': 'في الوجهة',
+        'completed': 'مكتملة'
+    };
+    return labels[status] || status;
+}
+
+// ==================== Timeline ====================
+function buildTimeline(trip) {
+    const currentStageIndex = STAGES.findIndex(s => s.key === trip.status);
+    
+    return `
+        <div class="timeline">
+            <div class="timeline-title">📊 مراحل الرحلة</div>
+            ${STAGES.map((stage, idx) => {
+                let cls = '';
+                let time = '';
+                
+                if (idx < currentStageIndex) {
+                    cls = 'done';
+                    // ابحث عن وقت هذه المرحلة
+                    const timeKey = stage.key + 'At';
+                    time = formatTimestamp(trip[timeKey]);
+                } else if (idx === currentStageIndex) {
+                    cls = 'current';
+                    if (trip.status === 'completed') cls = 'done';
+                    time = formatTimestamp(trip[stage.key + 'At']) || 'جاري';
+                }
+                
+                return `
+                    <div class="timeline-item ${cls}">
+                        <div class="timeline-icon">${cls === 'done' ? '✓' : (cls === 'current' ? '●' : idx + 1)}</div>
+                        <div class="timeline-info">
+                            <div class="timeline-label">${stage.icon} ${stage.label}</div>
+                            <div class="timeline-time">${time}</div>
+                        </div>
+                    </div>
+                `;
+            }).join('')}
+        </div>
+    `;
+}
+
+// ==================== إنشاء بطاقة الرحلة ====================
 function createTripCard(trip) {
     const card = document.createElement('div');
-    card.className = 'trip-card ' + (trip.status || 'assigned');
+    card.className = 'trip-card ' + (trip.status === 'completed' ? 'completed' : '');
 
     const statusLabel = getStatusLabel(trip.status);
 
-    // أزرار الإجراءات حسب الحالة
+    // الأزرار حسب المرحلة الحالية
     let actionButtons = '';
-    
+
     if (trip.status === 'approved') {
         actionButtons = `
             <div class="trip-actions">
-                <button class="btn-trip btn-start-trip" onclick="openModal('start', '${trip.requestNumber}')">
-                    🚀 بدء الرحلة
+                <button class="btn-trip btn-accept" onclick="openModal('accept', '${trip.requestNumber}')">
+                    📥 استلمت المهمة
                 </button>
             </div>
         `;
-    } else if (trip.status === 'in_progress') {
+    } else if (trip.status === 'accepted') {
         actionButtons = `
             <div class="trip-actions">
-                <button class="btn-trip btn-continue-trip" onclick="openModal('continue', '${trip.requestNumber}')">
-                    📍 تحديث الموقع / المتابعة
+                <button class="btn-trip btn-en-route" onclick="openModal('en_route', '${trip.requestNumber}')">
+                    🚗 توجهت للالتقاط
                 </button>
-                <button class="btn-trip btn-complete-trip" onclick="openModal('complete', '${trip.requestNumber}')">
-                    ✅ إنهاء الرحلة
+            </div>
+        `;
+    } else if (trip.status === 'en_route_pickup') {
+        actionButtons = `
+            <div class="trip-actions">
+                <button class="btn-trip btn-start-trip" onclick="openModal('start_trip', '${trip.requestNumber}')">
+                    🚀 بدأت الرحلة
+                </button>
+            </div>
+        `;
+    } else if (trip.status === 'trip_started') {
+        actionButtons = `
+            <div class="trip-actions">
+                <button class="btn-trip btn-arrived" onclick="openModal('arrived', '${trip.requestNumber}')">
+                    🎯 وصلت للوجهة
+                </button>
+            </div>
+        `;
+    } else if (trip.status === 'at_destination') {
+        actionButtons = `
+            <div class="trip-actions">
+                <button class="btn-trip btn-complete" onclick="openModal('complete', '${trip.requestNumber}')">
+                    ✅ أكملت الطلب
                 </button>
             </div>
         `;
     } else if (trip.status === 'completed') {
         actionButtons = `
             <div class="completed-note">
-                ✅ تم إنهاء هذه الرحلة بنجاح
+                ✅ تم إكمال هذه الرحلة بنجاح
             </div>
         `;
     }
@@ -132,7 +218,7 @@ function createTripCard(trip) {
     card.innerHTML = `
         <div class="trip-header">
             <div class="trip-number">${trip.requestNumber}</div>
-            <div class="status-badge ${trip.status || 'assigned'}">${statusLabel}</div>
+            <div class="status-badge ${trip.status === 'completed' ? 'completed' : ''}">${statusLabel}</div>
         </div>
 
         <div class="trip-body">
@@ -170,6 +256,7 @@ function createTripCard(trip) {
             </div>
         </div>
 
+        ${buildTimeline(trip)}
         ${actionButtons}
     `;
 
@@ -186,8 +273,7 @@ function renderTrips() {
         emptyState.style.display = 'block';
 
         const messages = {
-            'assigned': 'لا يوجد رحلات جاهزة للبدء',
-            'in_progress': 'لا يوجد رحلات قيد التنفيذ',
+            'active': 'لا يوجد رحلات نشطة حالياً',
             'completed': 'لا يوجد رحلات مكتملة',
             'all': 'لا يوجد رحلات مسندة إليك'
         };
@@ -211,67 +297,61 @@ function openModal(action, tripNumber) {
     const trip = myTrips.find(t => t.requestNumber === tripNumber);
     if (!trip) return;
 
-    const titles = {
-        'start': '🚀 بدء الرحلة',
-        'continue': '📍 تحديث الموقع',
-        'complete': '✅ إنهاء الرحلة'
+    const configs = {
+        'accept': {
+            title: '📥 استلام المهمة',
+            icon: '📥',
+            text: 'هل أنت مستعد لاستلام هذه المهمة والانطلاق؟',
+            btn: '📥 نعم، استلمت',
+            cls: 'info'
+        },
+        'en_route': {
+            title: '🚗 التوجه للالتقاط',
+            icon: '🚗',
+            text: 'هل أنت متجه الآن إلى مكان الالتقاط؟',
+            btn: '🚗 نعم، متوجه',
+            cls: 'primary'
+        },
+        'start_trip': {
+            title: '🚀 بدء الرحلة',
+            icon: '🚀',
+            text: 'هل استلمت الراكب وبدأت الرحلة فعلياً؟',
+            btn: '🚀 نعم، بدأت',
+            cls: 'primary'
+        },
+        'arrived': {
+            title: '🎯 الوصول للوجهة',
+            icon: '🎯',
+            text: 'هل وصلت إلى وجهة الرحلة؟',
+            btn: '🎯 نعم، وصلت',
+            cls: 'warning'
+        },
+        'complete': {
+            title: '✅ إكمال الطلب',
+            icon: '✅',
+            text: 'هل رجعت إلى مبنى الإدارة وأنهيت الرحلة؟',
+            btn: '✅ نعم، أكملت',
+            cls: ''
+        }
     };
-    modalTitle.textContent = titles[action] || 'إجراء';
 
-    let bodyHTML = `
+    const cfg = configs[action];
+    if (!cfg) return;
+
+    modalTitle.textContent = cfg.title;
+
+    modalBody.innerHTML = `
+        <div class="confirm-icon">${cfg.icon}</div>
         <div class="request-info-box">${trip.requestNumber}</div>
+        <p style="text-align:center;">${cfg.text}</p>
+        <p style="font-size:13px; color:#6b7280; text-align:center; margin-bottom:0;">
+            📍 ${trip.pickupLocation} → 🎯 ${trip.destination}
+        </p>
     `;
 
-    // بدء الرحلة
-    if (action === 'start') {
-        bodyHTML += `
-            <p>هل أنت جاهز لبدء الرحلة؟</p>
-            <p style="font-size: 13px; color: #6b7280; margin-bottom: 14px;">
-                📍 من: ${trip.pickupLocation}<br>
-                🎯 إلى: ${trip.destination}
-            </p>
-            <label>عداد الكيلومترات عند البدء <span class="required">*</span></label>
-            <input type="number" id="startOdometer" placeholder="مثال: 45600" min="0" required>
-            <small class="hint">سجّل قراءة العداد الحالية</small>
-        `;
-        modalConfirmBtn.className = 'btn-confirm';
-        modalConfirmBtn.textContent = '🚀 بدء الرحلة';
-    }
+    modalConfirmBtn.className = 'btn-confirm ' + cfg.cls;
+    modalConfirmBtn.textContent = cfg.btn;
 
-    // تحديث الموقع (متابعة)
-    else if (action === 'continue') {
-        bodyHTML += `
-            <p>📍 أنت في رحلة نشطة</p>
-            <p style="font-size: 13px; color: #6b7280; margin-bottom: 14px;">
-                تم بدء الرحلة في: ${trip.startedAt ? new Date(trip.startedAt).toLocaleString('ar-SA') : '-'}
-            </p>
-            <div style="background: #fef3c7; padding: 12px 14px; border-radius: 10px; font-size: 13px; color: #92400e; margin-bottom: 14px;">
-                ⚠️ <strong>ملاحظة:</strong> تتبع GPS سيتم إضافته لاحقًا في المرحلة القادمة.
-            </div>
-            <p style="font-size: 13px; color: #6b7280;">
-                يمكنك الاستمرار حتى تصل إلى الوجهة، ثم اضغط "إنهاء الرحلة".
-            </p>
-        `;
-        modalConfirmBtn.className = 'btn-confirm warning';
-        modalConfirmBtn.textContent = 'حسنًا';
-    }
-
-    // إنهاء الرحلة
-    else if (action === 'complete') {
-        bodyHTML += `
-            <p>هل وصلت إلى الوجهة وأنهيت الرحلة؟</p>
-            <label>عداد الكيلومترات عند النهاية <span class="required">*</span></label>
-            <input type="number" id="endOdometer" placeholder="مثال: 45650" min="0" required>
-            <small class="hint">قراءة العداد عند نهاية الرحلة</small>
-            
-            <label>ملاحظات (اختياري)</label>
-            <textarea id="tripNotes" placeholder="أي ملاحظات عن الرحلة..."></textarea>
-        `;
-        modalConfirmBtn.className = 'btn-confirm';
-        modalConfirmBtn.textContent = '✅ إنهاء الرحلة';
-    }
-
-    modalBody.innerHTML = bodyHTML;
     modal.style.display = 'flex';
 }
 
@@ -291,55 +371,58 @@ modalConfirmBtn.addEventListener('click', function () {
     if (tripIndex === -1) return;
 
     const trip = allRequests[tripIndex];
+    const now = new Date().toISOString();
 
-    // ==================== بدء الرحلة ====================
-    if (currentAction === 'start') {
-        const odometer = document.getElementById('startOdometer').value;
-        if (!odometer) { alert('❌ يجب إدخال قراءة العداد'); return; }
-
-        trip.status = 'in_progress';
-        trip.statusLabel = 'قيد التنفيذ';
-        trip.startedAt = new Date().toISOString();
-        trip.startOdometer = parseFloat(odometer);
-        trip.startedBy = currentUser.employeeId;
-        trip.startedByName = currentUser.name;
-
+    // ============ استلام المهمة ============
+    if (currentAction === 'accept') {
+        trip.status = 'accepted';
+        trip.statusLabel = 'تم الاستلام';
+        trip.acceptedAt = now;
         saveAndRefresh(allRequests);
         closeModal();
-        showToast('🚀 تم بدء الرحلة بنجاح');
+        showToast('📥 تم استلام المهمة بنجاح');
     }
 
-    // ==================== متابعة ====================
-    else if (currentAction === 'continue') {
+    // ============ التوجه للالتقاط ============
+    else if (currentAction === 'en_route') {
+        trip.status = 'en_route_pickup';
+        trip.statusLabel = 'متوجه للالتقاط';
+        trip.en_route_pickupAt = now;
+        saveAndRefresh(allRequests);
         closeModal();
-        showToast('📍 الرحلة نشطة، بالتوفيق!');
+        showToast('🚗 بالتوفيق في طريقك');
     }
 
-    // ==================== إنهاء الرحلة ====================
+    // ============ بدء الرحلة ============
+    else if (currentAction === 'start_trip') {
+        trip.status = 'trip_started';
+        trip.statusLabel = 'قيد الرحلة';
+        trip.trip_startedAt = now;
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🚀 تم بدء الرحلة، رحلة سعيدة');
+    }
+
+    // ============ الوصول للوجهة ============
+    else if (currentAction === 'arrived') {
+        trip.status = 'at_destination';
+        trip.statusLabel = 'في الوجهة';
+        trip.at_destinationAt = now;
+        saveAndRefresh(allRequests);
+        closeModal();
+        showToast('🎯 وصلت للوجهة بنجاح');
+    }
+
+    // ============ إكمال الطلب ============
     else if (currentAction === 'complete') {
-        const odometer = document.getElementById('endOdometer').value;
-        const notes = document.getElementById('tripNotes').value.trim();
-
-        if (!odometer) { alert('❌ يجب إدخال قراءة العداد النهائية'); return; }
-
-        // التحقق: العداد النهائي أكبر من الابتدائي
-        if (trip.startOdometer && parseFloat(odometer) < trip.startOdometer) {
-            alert('❌ قراءة العداد النهائية يجب أن تكون أكبر من أو تساوي الابتدائية');
-            return;
-        }
-
         trip.status = 'completed';
         trip.statusLabel = 'مكتملة';
-        trip.completedAt = new Date().toISOString();
-        trip.endOdometer = parseFloat(odometer);
-        trip.distance = trip.startOdometer ? (trip.endOdometer - trip.startOdometer) : null;
-        trip.tripNotes = notes;
+        trip.completedAt = now;
         trip.completedBy = currentUser.employeeId;
         trip.completedByName = currentUser.name;
-
         saveAndRefresh(allRequests);
         closeModal();
-        showToast('✅ تم إنهاء الرحلة بنجاح');
+        showToast('✅ تم إكمال الطلب بنجاح');
     }
 });
 
@@ -370,6 +453,8 @@ function showToast(message) {
         animation: slideUp 0.3s;
         direction: rtl;
         font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        text-align: center;
+        max-width: 90%;
     `;
     toast.textContent = message;
     document.body.appendChild(toast);
@@ -383,7 +468,6 @@ function showToast(message) {
 
 // ==================== الأحداث ====================
 document.addEventListener('DOMContentLoaded', function () {
-    // عرض بيانات السائق
     document.getElementById('driverName').textContent = currentUser.name || 'السائق';
     document.getElementById('driverId').textContent = 'رقم الموظف: ' + (currentUser.employeeId || '-');
 
