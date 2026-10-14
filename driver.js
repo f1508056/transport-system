@@ -759,4 +759,42 @@ function showToast(message) {
         font-weight: 600;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
         z-index: 2000;
-        animation:
+        animation: slideUp 0.3s;
+        direction: rtl;
+        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        text-align: center;
+        max-width: 90%;
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.3s';
+        setTimeout(() => toast.remove(), 300);
+    }, 2500);
+}
+
+// ==================== الأحداث ====================
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('driverName').textContent = currentUser.name || 'السائق';
+    document.getElementById('driverId').textContent = 'رقم الموظف: ' + (currentUser.employeeId || '-');
+
+    loadTrips();
+    updateStats();
+    renderTrips();
+
+    document.querySelectorAll('.filter-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            currentFilter = this.dataset.filter;
+            renderTrips();
+        });
+    });
+});
+
+// ==================== رجوع ====================
+function goBack() {
+    window.location.href = 'index.html';
+}
