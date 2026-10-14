@@ -26,10 +26,7 @@ const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 function loadAlerts() {
     const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
     
-    // البلاغات = الطلبات اللي فيها issueReportedAt
     allAlerts = allRequests.filter(r => r.issueReportedAt);
-    
-    // ترتيب من الأحدث
     allAlerts.sort((a, b) => new Date(b.issueReportedAt) - new Date(a.issueReportedAt));
 }
 
@@ -110,6 +107,24 @@ function getStatusLabel(status) {
     return status === 'issue_reported' ? '⚠️ مفتوح' : '✅ مُعالج';
 }
 
+// ==================== عرض صورة مكبرة ====================
+function viewImage(tripNumber, imageIndex) {
+    const trip = allAlerts.find(t => t.requestNumber === tripNumber);
+    if (!trip || !trip.issueImages || !trip.issueImages[imageIndex]) return;
+
+    const imgSrc = trip.issueImages[imageIndex];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'image-lightbox';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <button class="lightbox-close" onclick="this.parentElement.remove()">✕</button>
+        <img src="${imgSrc}" onclick="event.stopPropagation()">
+        <div class="lightbox-counter">${imageIndex + 1} / ${trip.issueImages.length}</div>
+    `;
+    document.body.appendChild(overlay);
+}
+
 // ==================== إنشاء بطاقة بلاغ ====================
 function createAlertCard(alert) {
     const card = document.createElement('div');
@@ -117,6 +132,21 @@ function createAlertCard(alert) {
     card.className = 'alert-card ' + (isResolved ? 'resolved' : '');
 
     const statusLabel = getStatusLabel(alert.status);
+
+    // الصور
+    let imagesHTML = '';
+    if (alert.issueImages && alert.issueImages.length > 0) {
+        imagesHTML = `
+            <div class="alert-images-box">
+                <div class="alert-images-title">📷 صور العطل (${alert.issueImages.length})</div>
+                <div class="alert-images-grid">
+                    ${alert.issueImages.map((img, idx) => `
+                        <img src="${img}" class="alert-thumb" onclick="viewImage('${alert.requestNumber}', ${idx})" alt="صورة العطل">
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
 
     // الأزرار حسب الحالة
     let actionButtons = '';
@@ -160,6 +190,7 @@ function createAlertCard(alert) {
         </div>
 
         ${notesBox}
+        ${imagesHTML}
 
         <div class="alert-body">
             <div class="info-item">
@@ -311,7 +342,6 @@ modalConfirmBtn.addEventListener('click', function () {
         if (!newDriver) { alert('❌ يجب اختيار السائق'); return; }
         if (!newVehicle) { alert('❌ يجب اختيار المركبة'); return; }
 
-        // إنشاء طلب جديد
         const newRequest = {
             requestNumber: generateRequestNumber(),
             requestDate: alert.requestDate,
@@ -340,7 +370,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
         allRequests.push(newRequest);
 
-        // إغلاق البلاغ الأصلي
         alert.status = 'resolved_replacement';
         alert.statusLabel = 'تم إغلاقه (طلب بديل)';
         alert.resolvedAt = now;
@@ -390,27 +419,18 @@ function generateRequestNumber() {
 function showToast(message) {
     const toast = document.createElement('div');
     toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
+        position: fixed; bottom: 30px; left: 50%;
         transform: translateX(-50%);
-        background: #1f2937;
-        color: white;
-        padding: 14px 24px;
-        border-radius: 50px;
-        font-size: 14px;
-        font-weight: 600;
+        background: #1f2937; color: white;
+        padding: 14px 24px; border-radius: 50px;
+        font-size: 14px; font-weight: 600;
         box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        z-index: 2000;
-        animation: slideUp 0.3s;
-        direction: rtl;
-        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-        text-align: center;
-        max-width: 90%;
+        z-index: 2000; animation: slideUp 0.3s;
+        direction: rtl; font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+        text-align: center; max-width: 90%;
     `;
     toast.textContent = message;
     document.body.appendChild(toast);
-
     setTimeout(() => {
         toast.style.opacity = '0';
         toast.style.transition = 'opacity 0.3s';
