@@ -127,10 +127,10 @@
 
         <div class="menu-grid">
             <a class="menu-card" href="add-request.html">
-    <div class="icon">📝</div>
-    <div class="title">إضافة طلب نقل</div>
-    <div class="desc">إنشاء طلب جديد</div>
-</a>
+                <div class="icon">📝</div>
+                <div class="title">إضافة طلب نقل</div>
+                <div class="desc">إنشاء طلب جديد</div>
+            </a>
 
             <a class="menu-card" href="#">
                 <div class="icon">✅</div>
@@ -138,7 +138,7 @@
                 <div class="desc">مراجعة واعتماد</div>
             </a>
 
-            <a class="menu-card" href="#">
+            <a class="menu-card" href="requests.html">
                 <div class="icon">📅</div>
                 <div class="title">جدول الرحلات</div>
                 <div class="desc">عرض الرحلات</div>
@@ -185,16 +185,13 @@
         const currentUserStr = localStorage.getItem('currentUser');
 
         if (!currentUserStr) {
-            // ما فيه مستخدم → حوّله لصفحة الدخول
             window.location.href = 'login.html';
         } else {
             const currentUser = JSON.parse(currentUserStr);
 
-            // عرض بيانات المستخدم
             document.getElementById('userName').textContent = currentUser.name;
             document.getElementById('userRole').textContent = currentUser.roleLabel;
 
-            // عرض وقت الدخول
             const loginDate = new Date(currentUser.loginTime);
             const formattedTime = loginDate.toLocaleString('ar-SA', {
                 year: 'numeric',
@@ -206,7 +203,6 @@
             document.getElementById('loginTime').textContent = 'وقت الدخول: ' + formattedTime;
         }
 
-        // دالة تسجيل الخروج
         function logout() {
             if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
                 localStorage.removeItem('currentUser');
