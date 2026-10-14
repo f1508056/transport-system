@@ -38,7 +38,6 @@ function loadDrivers() {
     if (stored) {
         allDrivers = JSON.parse(stored);
     } else {
-        // أول مرة — نحمل الافتراضيين
         allDrivers = [...DEFAULT_DRIVERS];
         saveDrivers();
     }
@@ -74,7 +73,6 @@ function createDriverCard(driver) {
 
     const initial = driver.name.charAt(0) || '؟';
 
-    // زر التفعيل/التعطيل
     const toggleBtn = driver.active
         ? `<button class="btn-action btn-toggle" onclick="toggleDriver('${driver.id}')">🚫 تعطيل</button>`
         : `<button class="btn-action btn-toggle activate" onclick="toggleDriver('${driver.id}')">✅ تفعيل</button>`;
@@ -221,7 +219,7 @@ function closeModal() {
     currentEditId = null;
 }
 
-// ==================== حفظ السائق (إضافة/تعديل) ====================
+// ==================== حفظ السائق (إضافة/تعديل/حذف) ====================
 modalConfirmBtn.addEventListener('click', function () {
     const modalTitleText = modalTitle.textContent;
 
@@ -229,10 +227,19 @@ modalConfirmBtn.addEventListener('click', function () {
     if (modalTitleText.includes('حذف')) {
         if (!currentEditId) return;
 
+        const deletedDriver = allDrivers.find(d => d.id === currentEditId);
+        if (!deletedDriver) return;
+
         allDrivers = allDrivers.filter(d => d.id !== currentEditId);
         saveDrivers();
         updateStats();
         renderDrivers();
+
+        // 📜 تسجيل الحدث
+        logAudit('driver', 'حذف سائق', currentEditId, {
+            newValues: { status: 'محذوف', driver: deletedDriver.name }
+        });
+
         closeModal();
         showToast('🗑️ تم حذف السائق');
         return;
@@ -249,7 +256,6 @@ modalConfirmBtn.addEventListener('click', function () {
 
     // ============ إضافة جديدة ============
     if (!currentEditId) {
-        // تحقق من عدم تكرار الرقم
         if (allDrivers.find(d => d.id === id)) {
             alert('❌ رقم الموظف مسجل مسبقاً');
             return;
@@ -267,6 +273,12 @@ modalConfirmBtn.addEventListener('click', function () {
         saveDrivers();
         updateStats();
         renderDrivers();
+
+        // 📜 تسجيل الحدث
+        logAudit('driver', 'إضافة سائق جديد', id, {
+            newValues: { status: 'نشط', driver: name }
+        });
+
         closeModal();
         showToast('✅ تم إضافة السائق بنجاح');
     }
@@ -276,6 +288,10 @@ modalConfirmBtn.addEventListener('click', function () {
         const driver = allDrivers.find(d => d.id === currentEditId);
         if (!driver) return;
 
+        const oldName = driver.name;
+        const oldPhone = driver.phone;
+        const oldLicense = driver.license;
+
         driver.name = name;
         driver.phone = phone || null;
         driver.license = license || null;
@@ -283,6 +299,13 @@ modalConfirmBtn.addEventListener('click', function () {
         saveDrivers();
         updateStats();
         renderDrivers();
+
+        // 📜 تسجيل الحدث
+        logAudit('driver', 'تعديل بيانات سائق', currentEditId, {
+            oldValues: { driver: oldName + ' | ' + oldPhone + ' | ' + oldLicense },
+            newValues: { driver: name + ' | ' + (phone || '-') + ' | ' + (license || '-') }
+        });
+
         closeModal();
         showToast('✅ تم حفظ التعديلات');
     }
@@ -300,6 +323,12 @@ function toggleDriver(driverId) {
     saveDrivers();
     updateStats();
     renderDrivers();
+
+    // 📜 تسجيل الحدث
+    logAudit('driver', driver.active ? 'تفعيل سائق' : 'تعطيل سائق', driverId, {
+        newValues: { status: driver.active ? 'نشط' : 'معطّل', driver: driver.name }
+    });
+
     showToast(driver.active ? '✅ تم تفعيل السائق' : '🚫 تم تعطيل السائق');
 }
 
