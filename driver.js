@@ -37,7 +37,6 @@ const modalConfirmBtn = document.getElementById('modalConfirmBtn');
 function loadTrips() {
     const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
     
-    // تصفية الرحلات المسندة لهذا السائق
     myTrips = allRequests.filter(r => 
         r.assignedDriver === currentUser.employeeId &&
         (
@@ -134,7 +133,6 @@ function buildTimeline(trip) {
                 
                 if (idx < currentStageIndex) {
                     cls = 'done';
-                    // ابحث عن وقت هذه المرحلة
                     const timeKey = stage.key + 'At';
                     time = formatTimestamp(trip[timeKey]);
                 } else if (idx === currentStageIndex) {
@@ -157,6 +155,43 @@ function buildTimeline(trip) {
     `;
 }
 
+// ==================== ملخص الفحص (يظهر في البطاقة) ====================
+function buildInspectionSummary(trip) {
+    if (!trip.inspectionStart && !trip.inspectionEnd) return '';
+    
+    let html = '<div class="inspection-summary">';
+    
+    if (trip.inspectionStart) {
+        const i = trip.inspectionStart;
+        html += `
+            <div class="inspection-title">🔍 فحص الاستلام</div>
+            <div class="inspection-grid">
+                <div>🛞 الإطارات: <strong>${i.tires || '-'}</strong></div>
+                <div>⛽ الوقود: <strong>${i.fuel || '-'}</strong></div>
+                <div>🧼 النظافة: <strong>${i.cleanliness || '-'}</strong></div>
+                <div>💡 الأنوار: <strong>${i.lights || '-'}</strong></div>
+            </div>
+            ${i.startOdometer ? `<div class="inspection-odometer">📏 عداد البداية: <strong>${i.startOdometer} كم</strong></div>` : ''}
+        `;
+    }
+    
+    if (trip.inspectionEnd) {
+        const i = trip.inspectionEnd;
+        html += `
+            <div class="inspection-title">🔍 فحص الإكمال</div>
+            <div class="inspection-grid">
+                <div>🚗 حالة المركبة: <strong>${i.vehicleCondition || '-'}</strong></div>
+                <div>⛽ الوقود: <strong>${i.fuel || '-'}</strong></div>
+            </div>
+            ${i.endOdometer ? `<div class="inspection-odometer">📏 عداد النهاية: <strong>${i.endOdometer} كم</strong></div>` : ''}
+            ${trip.distance ? `<div class="inspection-odometer">📊 المسافة: <strong>${trip.distance} كم</strong></div>` : ''}
+        `;
+    }
+    
+    html += '</div>';
+    return html;
+}
+
 // ==================== إنشاء بطاقة الرحلة ====================
 function createTripCard(trip) {
     const card = document.createElement('div');
@@ -164,7 +199,6 @@ function createTripCard(trip) {
 
     const statusLabel = getStatusLabel(trip.status);
 
-    // الأزرار حسب المرحلة الحالية
     let actionButtons = '';
 
     if (trip.status === 'approved') {
@@ -256,6 +290,7 @@ function createTripCard(trip) {
             </div>
         </div>
 
+        ${buildInspectionSummary(trip)}
         ${buildTimeline(trip)}
         ${actionButtons}
     `;
@@ -289,6 +324,112 @@ function renderTrips() {
     });
 }
 
+// ==================== نموذج فحص الاستلام ====================
+function buildAcceptForm() {
+    return `
+        <div class="confirm-icon">📥</div>
+        <div class="request-info-box">${currentTripNumber}</div>
+        <p style="text-align:center; margin-bottom:18px;">أدخل بيانات استلام المركبة</p>
+
+        <div class="form-section-mini">
+            <label class="form-label-mini">📏 عداد الكيلومترات الحالي <span class="required">*</span></label>
+            <input type="number" id="startOdometer" class="input-mini" placeholder="مثال: 45600" min="0" required>
+        </div>
+
+        <div class="form-section-mini">
+            <label class="form-label-mini">🔍 فحص السيارة</label>
+            
+            <div class="inspection-field">
+                <label class="field-label">🛞 الإطارات <span class="required">*</span></label>
+                <select id="tiresStatus" class="input-mini" required>
+                    <option value="">-- اختر الحالة --</option>
+                    <option value="سليمة">✅ سليمة</option>
+                    <option value="تحتاج فحص">⚠️ تحتاج فحص</option>
+                    <option value="بها عطل">❌ بها عطل</option>
+                </select>
+            </div>
+
+            <div class="inspection-field">
+                <label class="field-label">⛽ مستوى الوقود <span class="required">*</span></label>
+                <select id="fuelLevel" class="input-mini" required>
+                    <option value="">-- اختر المستوى --</option>
+                    <option value="ممتلئ">ممتلئ (F)</option>
+                    <option value="3/4">¾</option>
+                    <option value="1/2">½</option>
+                    <option value="1/4">¼</option>
+                    <option value="فارغ">فارغ (E)</option>
+                </select>
+            </div>
+
+            <div class="inspection-field">
+                <label class="field-label">🧼 النظافة <span class="required">*</span></label>
+                <select id="cleanlinessStatus" class="input-mini" required>
+                    <option value="">-- اختر الحالة --</option>
+                    <option value="ممتازة">✅ ممتازة</option>
+                    <option value="جيدة">🟡 جيدة</option>
+                    <option value="تحتاج تنظيف">❌ تحتاج تنظيف</option>
+                </select>
+            </div>
+
+            <div class="inspection-field">
+                <label class="field-label">💡 الأنوار <span class="required">*</span></label>
+                <select id="lightsStatus" class="input-mini" required>
+                    <option value="">-- اختر الحالة --</option>
+                    <option value="تعمل جميعها">✅ تعمل جميعها</option>
+                    <option value="بعضها لا يعمل">⚠️ بعضها لا يعمل</option>
+                    <option value="لا تعمل">❌ لا تعمل</option>
+                </select>
+            </div>
+
+            <div class="inspection-field">
+                <label class="field-label">📝 ملاحظات عن عطل سابق (اختياري)</label>
+                <textarea id="previousIssue" class="input-mini" rows="2" placeholder="هل يوجد عطل أو حادث سابق؟"></textarea>
+            </div>
+        </div>
+    `;
+}
+
+// ==================== نموذج إكمال الطلب ====================
+function buildCompleteForm() {
+    return `
+        <div class="confirm-icon">✅</div>
+        <div class="request-info-box">${currentTripNumber}</div>
+        <p style="text-align:center; margin-bottom:18px;">أدخل بيانات إكمال الرحلة</p>
+
+        <div class="form-section-mini">
+            <label class="form-label-mini">📏 عداد الكيلومترات عند النهاية <span class="required">*</span></label>
+            <input type="number" id="endOdometer" class="input-mini" placeholder="مثال: 45650" min="0" required>
+        </div>
+
+        <div class="form-section-mini">
+            <label class="field-label">🚗 حالة المركبة <span class="required">*</span></label>
+            <select id="vehicleCondition" class="input-mini" required>
+                <option value="">-- اختر الحالة --</option>
+                <option value="سليمة">✅ سليمة</option>
+                <option value="بها ملاحظات بسيطة">⚠️ بها ملاحظات بسيطة</option>
+                <option value="بها عطل">❌ بها عطل</option>
+            </select>
+        </div>
+
+        <div class="form-section-mini">
+            <label class="field-label">⛽ مستوى الوقود <span class="required">*</span></label>
+            <select id="fuelLevelEnd" class="input-mini" required>
+                <option value="">-- اختر المستوى --</option>
+                <option value="ممتلئ">ممتلئ (F)</option>
+                <option value="3/4">¾</option>
+                <option value="1/2">½</option>
+                <option value="1/4">¼</option>
+                <option value="فارغ">فارغ (E)</option>
+            </select>
+        </div>
+
+        <div class="form-section-mini">
+            <label class="field-label">📝 ملاحظات إضافية (اختياري)</label>
+            <textarea id="endNotes" class="input-mini" rows="2" placeholder="أي ملاحظات عن الرحلة..."></textarea>
+        </div>
+    `;
+}
+
 // ==================== فتح النافذة ====================
 function openModal(action, tripNumber) {
     currentAction = action;
@@ -297,14 +438,28 @@ function openModal(action, tripNumber) {
     const trip = myTrips.find(t => t.requestNumber === tripNumber);
     if (!trip) return;
 
+    // ============ استلام المهمة - نموذج كامل ============
+    if (action === 'accept') {
+        modalTitle.textContent = '📥 استلام المهمة';
+        modalBody.innerHTML = buildAcceptForm();
+        modalConfirmBtn.className = 'btn-confirm info';
+        modalConfirmBtn.textContent = '📥 تأكيد الاستلام';
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // ============ إكمال الطلب - نموذج كامل ============
+    if (action === 'complete') {
+        modalTitle.textContent = '✅ إكمال الطلب';
+        modalBody.innerHTML = buildCompleteForm();
+        modalConfirmBtn.className = 'btn-confirm';
+        modalConfirmBtn.textContent = '✅ إكمال';
+        modal.style.display = 'flex';
+        return;
+    }
+
+    // ============ باقي المراحل - تأكيد بسيط ============
     const configs = {
-        'accept': {
-            title: '📥 استلام المهمة',
-            icon: '📥',
-            text: 'هل أنت مستعد لاستلام هذه المهمة والانطلاق؟',
-            btn: '📥 نعم، استلمت',
-            cls: 'info'
-        },
         'en_route': {
             title: '🚗 التوجه للالتقاط',
             icon: '🚗',
@@ -325,13 +480,6 @@ function openModal(action, tripNumber) {
             text: 'هل وصلت إلى وجهة الرحلة؟',
             btn: '🎯 نعم، وصلت',
             cls: 'warning'
-        },
-        'complete': {
-            title: '✅ إكمال الطلب',
-            icon: '✅',
-            text: 'هل رجعت إلى مبنى الإدارة وأنهيت الرحلة؟',
-            btn: '✅ نعم، أكملت',
-            cls: ''
         }
     };
 
@@ -375,9 +523,36 @@ modalConfirmBtn.addEventListener('click', function () {
 
     // ============ استلام المهمة ============
     if (currentAction === 'accept') {
+        const startOdometer = document.getElementById('startOdometer').value;
+        const tires = document.getElementById('tiresStatus').value;
+        const fuel = document.getElementById('fuelLevel').value;
+        const cleanliness = document.getElementById('cleanlinessStatus').value;
+        const lights = document.getElementById('lightsStatus').value;
+        const previousIssue = document.getElementById('previousIssue').value.trim();
+
+        // التحقق
+        if (!startOdometer) { alert('❌ يجب إدخال عداد الكيلومترات'); return; }
+        if (!tires) { alert('❌ يجب اختيار حالة الإطارات'); return; }
+        if (!fuel) { alert('❌ يجب اختيار مستوى الوقود'); return; }
+        if (!cleanliness) { alert('❌ يجب اختيار حالة النظافة'); return; }
+        if (!lights) { alert('❌ يجب اختيار حالة الأنوار'); return; }
+
+        // حفظ بيانات الفحص
+        trip.inspectionStart = {
+            startOdometer: parseFloat(startOdometer),
+            tires: tires,
+            fuel: fuel,
+            cleanliness: cleanliness,
+            lights: lights,
+            previousIssue: previousIssue || null,
+            inspectedAt: now,
+            inspectedBy: currentUser.employeeId
+        };
+
         trip.status = 'accepted';
         trip.statusLabel = 'تم الاستلام';
         trip.acceptedAt = now;
+
         saveAndRefresh(allRequests);
         closeModal();
         showToast('📥 تم استلام المهمة بنجاح');
@@ -415,11 +590,46 @@ modalConfirmBtn.addEventListener('click', function () {
 
     // ============ إكمال الطلب ============
     else if (currentAction === 'complete') {
+        const endOdometer = document.getElementById('endOdometer').value;
+        const vehicleCondition = document.getElementById('vehicleCondition').value;
+        const fuelLevelEnd = document.getElementById('fuelLevelEnd').value;
+        const endNotes = document.getElementById('endNotes').value.trim();
+
+        // التحقق
+        if (!endOdometer) { alert('❌ يجب إدخال عداد الكيلومترات النهائي'); return; }
+        if (!vehicleCondition) { alert('❌ يجب اختيار حالة المركبة'); return; }
+        if (!fuelLevelEnd) { alert('❌ يجب اختيار مستوى الوقود'); return; }
+
+        // التحقق: العداد النهائي >= الابتدائي
+        const startOdo = trip.inspectionStart ? trip.inspectionStart.startOdometer : null;
+        if (startOdo && parseFloat(endOdometer) < startOdo) {
+            alert('❌ قراءة العداد النهائية يجب أن تكون أكبر من أو تساوي الابتدائية');
+            return;
+        }
+
+        // حساب المسافة
+        let distance = null;
+        if (startOdo) {
+            distance = parseFloat(endOdometer) - startOdo;
+        }
+
+        // حفظ بيانات الفحص النهائي
+        trip.inspectionEnd = {
+            endOdometer: parseFloat(endOdometer),
+            vehicleCondition: vehicleCondition,
+            fuel: fuelLevelEnd,
+            notes: endNotes || null,
+            inspectedAt: now,
+            inspectedBy: currentUser.employeeId
+        };
+
+        trip.distance = distance;
         trip.status = 'completed';
         trip.statusLabel = 'مكتملة';
         trip.completedAt = now;
         trip.completedBy = currentUser.employeeId;
         trip.completedByName = currentUser.name;
+
         saveAndRefresh(allRequests);
         closeModal();
         showToast('✅ تم إكمال الطلب بنجاح');
