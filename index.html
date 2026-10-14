@@ -3,80 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام إدارة وجدولة النقل</title>
+    <title>لوحة التحكم - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="style.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
         body {
-            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-            background: linear-gradient(135deg, #1e3a8a 0%, #3b82f6 100%);
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #f3f4f6;
+            display: block;
+            padding: 0;
+            align-items: initial;
+            justify-content: initial;
+        }
+        .dashboard {
+            max-width: 800px;
+            margin: 0 auto;
             padding: 20px;
+        }
+        .welcome-card {
+            background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
             color: #fff;
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
             border-radius: 20px;
-            padding: 40px 30px;
-            max-width: 500px;
-            width: 100%;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        .icon {
-            font-size: 60px;
+            padding: 30px 24px;
             margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(30, 64, 175, 0.3);
         }
-        h1 {
-            font-size: 28px;
-            margin-bottom: 15px;
-            font-weight: 700;
+        .welcome-card h1 {
+            font-size: 24px;
+            margin-bottom: 8px;
         }
-        p {
-            font-size: 16px;
-            line-height: 1.7;
-            opacity: 0.9;
-            margin-bottom: 25px;
-        }
-        .status {
+        .welcome-card .role-badge {
             display: inline-block;
-            background: #10b981;
-            padding: 8px 20px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 16px;
             border-radius: 50px;
             font-size: 14px;
             font-weight: 600;
-            margin-bottom: 20px;
+            margin-top: 10px;
         }
-        .footer {
+        .welcome-card .time {
             font-size: 13px;
-            opacity: 0.7;
-            margin-top: 30px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-            padding-top: 20px;
+            opacity: 0.85;
+            margin-top: 8px;
+        }
+        .section-title {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 20px 0 12px;
+        }
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+        }
+        .menu-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 20px 16px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+            border: 2px solid transparent;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+        .menu-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 24px rgba(0, 0, 0, 0.12);
+            border-color: #3b82f6;
+        }
+        .menu-card .icon {
+            font-size: 36px;
+            margin-bottom: 8px;
+        }
+        .menu-card .title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+        .menu-card .desc {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .btn-logout {
+            display: block;
+            width: 100%;
+            padding: 14px;
+            background: #ef4444;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            font-family: inherit;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.2s;
+        }
+        .btn-logout:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+        }
+        @media (max-width: 480px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="card">
-        <div class="icon">🚗</div>
-        <div class="status">✅ الموقع يعمل بنجاح</div>
-        <h1>نظام إدارة وجدولة النقل</h1>
-        <p>
-            مرحباً بك في النظام. هذا النموذج الأولي جاهز للتطوير.<br>
-            سنضيف قريباً: تسجيل الدخول، إدارة الطلبات، الاعتماد، ومتابعة الرحلات.
-        </p>
-        <div class="footer">
-            Transport Management & Scheduling System<br>
-            الإصدار التجريبي الأول
+    <div class="dashboard">
+        <div class="welcome-card">
+            <h1>مرحبًا، <span id="userName">المستخدم</span> 👋</h1>
+            <div class="role-badge">
+                <span id="userRole">الدور</span>
+            </div>
+            <div class="time" id="loginTime">وقت الدخول:</div>
         </div>
+
+        <h2 class="section-title">📋 القائمة الرئيسية</h2>
+
+        <div class="menu-grid">
+            <a class="menu-card" href="#">
+                <div class="icon">📝</div>
+                <div class="title">إضافة طلب نقل</div>
+                <div class="desc">إنشاء طلب جديد</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">✅</div>
+                <div class="title">اعتماد الطلبات</div>
+                <div class="desc">مراجعة واعتماد</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">📅</div>
+                <div class="title">جدول الرحلات</div>
+                <div class="desc">عرض الرحلات</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">🚗</div>
+                <div class="title">المركبات</div>
+                <div class="desc">إدارة المركبات</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">👤</div>
+                <div class="title">السائقون</div>
+                <div class="desc">إدارة السائقين</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">📊</div>
+                <div class="title">التقارير</div>
+                <div class="desc">إحصائيات وتقارير</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">🗺️</div>
+                <div class="title">تتبع GPS</div>
+                <div class="desc">الرحلات النشطة</div>
+            </a>
+
+            <a class="menu-card" href="#">
+                <div class="icon">⚙️</div>
+                <div class="title">الإعدادات</div>
+                <div class="desc">إعدادات النظام</div>
+            </a>
+        </div>
+
+        <button class="btn-logout" onclick="logout()">
+            🚪 تسجيل الخروج
+        </button>
     </div>
+
+    <script>
+        // التحقق من وجود مستخدم مسجل دخول
+        const currentUserStr = localStorage.getItem('currentUser');
+
+        if (!currentUserStr) {
+            // ما فيه مستخدم → حوّله لصفحة الدخول
+            window.location.href = 'login.html';
+        } else {
+            const currentUser = JSON.parse(currentUserStr);
+
+            // عرض بيانات المستخدم
+            document.getElementById('userName').textContent = currentUser.name;
+            document.getElementById('userRole').textContent = currentUser.roleLabel;
+
+            // عرض وقت الدخول
+            const loginDate = new Date(currentUser.loginTime);
+            const formattedTime = loginDate.toLocaleString('ar-SA', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('loginTime').textContent = 'وقت الدخول: ' + formattedTime;
+        }
+
+        // دالة تسجيل الخروج
+        function logout() {
+            if (confirm('هل أنت متأكد من تسجيل الخروج؟')) {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'login.html';
+            }
+        }
+    </script>
 </body>
 </html>
