@@ -12,7 +12,7 @@ let myTrips = [];
 let currentFilter = 'active';
 let currentAction = null;
 let currentTripNumber = null;
-let currentIssueImages = []; // صور البلاغ الحالي
+let currentIssueImages = [];
 
 // ==================== مراحل الرحلة ====================
 const STAGES = [
@@ -245,7 +245,6 @@ function buildIssueAlert(trip) {
         'other': '❓ أخرى'
     };
     
-    // الصور
     let imagesHTML = '';
     if (trip.issueImages && trip.issueImages.length > 0) {
         imagesHTML = `
@@ -636,7 +635,6 @@ function openModal(action, tripNumber) {
         modalConfirmBtn.textContent = '🚨 تأكيد الإبلاغ';
         modal.style.display = 'flex';
 
-        // ربط حدث الصور
         setTimeout(() => {
             const input = document.getElementById('issueImagesInput');
             if (input) {
@@ -655,14 +653,13 @@ function openModal(action, tripNumber) {
                         }
                     }
                     renderImagesPreview();
-                    e.target.value = ''; // reset
+                    e.target.value = '';
                 });
             }
         }, 100);
         return;
     }
 
-    // المراحل البسيطة
     const configs = {
         'en_route': {
             title: '🚗 التوجه للالتقاط',
@@ -756,6 +753,12 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.acceptedAt = now;
 
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        logAudit('trip', 'استلام مهمة من السائق', trip.requestNumber, {
+            newValues: { status: 'تم الاستلام' }
+        });
+
         closeModal();
         showToast('📥 تم استلام المهمة بنجاح');
     }
@@ -765,6 +768,12 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.statusLabel = 'متوجه للالتقاط';
         trip.en_route_pickupAt = now;
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        logAudit('trip', 'السائق متوجه للالتقاط', trip.requestNumber, {
+            newValues: { status: 'متوجه للالتقاط' }
+        });
+
         closeModal();
         showToast('🚗 بالتوفيق في طريقك');
     }
@@ -774,6 +783,12 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.statusLabel = 'قيد الرحلة';
         trip.trip_startedAt = now;
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        logAudit('trip', 'بدء الرحلة مع الراكب', trip.requestNumber, {
+            newValues: { status: 'قيد الرحلة' }
+        });
+
         closeModal();
         showToast('🚀 تم بدء الرحلة');
     }
@@ -783,6 +798,12 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.statusLabel = 'في الوجهة';
         trip.at_destinationAt = now;
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        logAudit('trip', 'الوصول للوجهة', trip.requestNumber, {
+            newValues: { status: 'في الوجهة' }
+        });
+
         closeModal();
         showToast('🎯 وصلت للوجهة');
     }
@@ -824,6 +845,15 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.completedByName = currentUser.name;
 
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        logAudit('trip', 'إكمال الرحلة والعودة للإدارة', trip.requestNumber, {
+            newValues: { 
+                status: 'مكتملة',
+                vehicle: (distance ? distance + ' كم' : 'المسافة غير محسوبة')
+            }
+        });
+
         closeModal();
         showToast('✅ تم إكمال الطلب بنجاح');
     }
@@ -846,6 +876,21 @@ modalConfirmBtn.addEventListener('click', function () {
         trip.issueReportedByName = currentUser.name;
 
         saveAndRefresh(allRequests);
+
+        // 📜 تسجيل الحدث
+        const issueLabels = {
+            'mechanical': 'عطل ميكانيكي',
+            'electrical': 'عطل كهربائي',
+            'tire': 'إطار مثقوب',
+            'accident': 'حادث سير',
+            'fuel': 'نفاد وقود',
+            'other': 'أخرى'
+        };
+        logAudit('issue', 'بلاغ عطل من السائق', trip.requestNumber, {
+            newValues: { status: '⚠️ بلاغ عطل' },
+            reason: (issueLabels[issueType] || issueType) + (issueNotes ? ' — ' + issueNotes : '')
+        });
+
         closeModal();
         showToast('🚨 تم الإبلاغ — جاري إشعار المنفذ');
     }
