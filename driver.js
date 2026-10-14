@@ -12,6 +12,7 @@ let myTrips = [];
 let currentFilter = 'active';
 let currentAction = null;
 let currentTripNumber = null;
+let currentIssueImages = []; // صور البلاغ الحالي
 
 // ==================== مراحل الرحلة ====================
 const STAGES = [
@@ -124,7 +125,6 @@ function getStatusLabel(status) {
 
 // ==================== Timeline ====================
 function buildTimeline(trip) {
-    // في حالة البلاغ - عرض Timeline مختصر
     if (trip.status === 'issue_reported') {
         const currentStageIndex = STAGES.findIndex(s => s.key === trip.issueStage);
         
@@ -232,7 +232,7 @@ function buildInspectionSummary(trip) {
     return html;
 }
 
-// ==================== تنبيه العطل في البطاقة ====================
+// ==================== تنبيه العطل ====================
 function buildIssueAlert(trip) {
     if (trip.status !== 'issue_reported') return '';
     
@@ -245,11 +245,24 @@ function buildIssueAlert(trip) {
         'other': '❓ أخرى'
     };
     
+    // الصور
+    let imagesHTML = '';
+    if (trip.issueImages && trip.issueImages.length > 0) {
+        imagesHTML = `
+            <div class="issue-images">
+                ${trip.issueImages.map((img, idx) => `
+                    <img src="${img}" class="issue-thumb" onclick="viewImage('${trip.requestNumber}', ${idx})" alt="صورة العطل">
+                `).join('')}
+            </div>
+        `;
+    }
+    
     return `
         <div class="issue-alert">
             <div class="issue-alert-title">⚠️ تم الإبلاغ عن عطل</div>
             <div class="issue-alert-type">${issueTypes[trip.issueType] || trip.issueType || 'غير محدد'}</div>
             ${trip.issueNotes ? `<div class="issue-alert-notes">📝 ${trip.issueNotes}</div>` : ''}
+            ${imagesHTML}
             <div class="issue-alert-time">⏰ ${formatTimestamp(trip.issueReportedAt)}</div>
             <div class="issue-alert-hint">📢 تم إبلاغ المنفذ — في انتظار الإجراء</div>
         </div>
@@ -266,8 +279,6 @@ function createTripCard(trip) {
     const statusLabel = getStatusLabel(trip.status);
 
     let actionButtons = '';
-
-    // زر البلاغ يظهر في كل المراحل إلا المكتملة والمبلّغ عنها
     const showIssueButton = trip.status !== 'completed' && trip.status !== 'issue_reported';
 
     let mainAction = '';
@@ -503,16 +514,98 @@ function buildIssueForm() {
             <textarea id="issueNotes" class="input-mini" rows="3" placeholder="اشرح المشكلة بالتفصيل..."></textarea>
         </div>
 
+        <div class="form-section-mini">
+            <label class="form-label-mini">📷 صور العطل (اختياري — حتى 5 صور)</label>
+            <div class="images-upload-area">
+                <input type="file" id="issueImagesInput" accept="image/*" multiple style="display:none;">
+                <button type="button" class="btn-upload-image" onclick="document.getElementById('issueImagesInput').click()">
+                    📷 إضافة صور
+                </button>
+                <div id="imagesPreview" class="images-preview"></div>
+            </div>
+        </div>
+
         <div style="background:#fee2e2; padding:12px 14px; border-radius:10px; font-size:13px; color:#991b1b; text-align:center;">
             ⚠️ لن تستطيع إكمال الرحلة بعد الإبلاغ
         </div>
     `;
 }
 
+// ==================== معاينة الصور ====================
+function renderImagesPreview() {
+    const preview = document.getElementById('imagesPreview');
+    if (!preview) return;
+
+    preview.innerHTML = currentIssueImages.map((img, idx) => `
+        <div class="preview-item">
+            <img src="${img}" alt="صورة ${idx + 1}">
+            <button type="button" class="btn-remove-image" onclick="removeIssueImage(${idx})">✕</button>
+        </div>
+    `).join('');
+}
+
+function removeIssueImage(idx) {
+    currentIssueImages.splice(idx, 1);
+    renderImagesPreview();
+}
+
+// ==================== ضغط الصور ====================
+function compressImage(file, maxWidth = 800, quality = 0.7) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                if (width > maxWidth) {
+                    height = (height * maxWidth) / width;
+                    width = maxWidth;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+// ==================== عرض صورة مكبرة ====================
+function viewImage(tripNumber, imageIndex) {
+    const allRequests = JSON.parse(localStorage.getItem('transportRequests') || '[]');
+    const trip = allRequests.find(t => t.requestNumber === tripNumber);
+    if (!trip || !trip.issueImages || !trip.issueImages[imageIndex]) return;
+
+    const imgSrc = trip.issueImages[imageIndex];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'image-lightbox';
+    overlay.onclick = () => overlay.remove();
+    overlay.innerHTML = `
+        <button class="lightbox-close" onclick="this.parentElement.remove()">✕</button>
+        <img src="${imgSrc}" onclick="event.stopPropagation()">
+        <div class="lightbox-counter">${imageIndex + 1} / ${trip.issueImages.length}</div>
+    `;
+    document.body.appendChild(overlay);
+}
+
 // ==================== فتح النافذة ====================
 function openModal(action, tripNumber) {
     currentAction = action;
     currentTripNumber = tripNumber;
+    currentIssueImages = [];
 
     const trip = myTrips.find(t => t.requestNumber === tripNumber);
     if (!trip) return;
@@ -542,6 +635,30 @@ function openModal(action, tripNumber) {
         modalConfirmBtn.style.background = '#ef4444';
         modalConfirmBtn.textContent = '🚨 تأكيد الإبلاغ';
         modal.style.display = 'flex';
+
+        // ربط حدث الصور
+        setTimeout(() => {
+            const input = document.getElementById('issueImagesInput');
+            if (input) {
+                input.addEventListener('change', async (e) => {
+                    const files = Array.from(e.target.files);
+                    for (const file of files) {
+                        if (currentIssueImages.length >= 5) {
+                            alert('⚠️ الحد الأقصى 5 صور');
+                            break;
+                        }
+                        try {
+                            const compressed = await compressImage(file);
+                            currentIssueImages.push(compressed);
+                        } catch (err) {
+                            console.error('خطأ في ضغط الصورة:', err);
+                        }
+                    }
+                    renderImagesPreview();
+                    e.target.value = ''; // reset
+                });
+            }
+        }, 100);
         return;
     }
 
@@ -594,6 +711,7 @@ function closeModal() {
     modal.style.display = 'none';
     currentAction = null;
     currentTripNumber = null;
+    currentIssueImages = [];
     modalConfirmBtn.style.background = '';
 }
 
@@ -639,162 +757,4 @@ modalConfirmBtn.addEventListener('click', function () {
 
         saveAndRefresh(allRequests);
         closeModal();
-        showToast('📥 تم استلام المهمة بنجاح');
-    }
-
-    else if (currentAction === 'en_route') {
-        trip.status = 'en_route_pickup';
-        trip.statusLabel = 'متوجه للالتقاط';
-        trip.en_route_pickupAt = now;
-        saveAndRefresh(allRequests);
-        closeModal();
-        showToast('🚗 بالتوفيق في طريقك');
-    }
-
-    else if (currentAction === 'start_trip') {
-        trip.status = 'trip_started';
-        trip.statusLabel = 'قيد الرحلة';
-        trip.trip_startedAt = now;
-        saveAndRefresh(allRequests);
-        closeModal();
-        showToast('🚀 تم بدء الرحلة');
-    }
-
-    else if (currentAction === 'arrived') {
-        trip.status = 'at_destination';
-        trip.statusLabel = 'في الوجهة';
-        trip.at_destinationAt = now;
-        saveAndRefresh(allRequests);
-        closeModal();
-        showToast('🎯 وصلت للوجهة');
-    }
-
-    else if (currentAction === 'complete') {
-        const endOdometer = document.getElementById('endOdometer').value;
-        const vehicleCondition = document.getElementById('vehicleCondition').value;
-        const fuelLevelEnd = document.getElementById('fuelLevelEnd').value;
-        const endNotes = document.getElementById('endNotes').value.trim();
-
-        if (!endOdometer) { alert('❌ يجب إدخال عداد الكيلومترات النهائي'); return; }
-        if (!vehicleCondition) { alert('❌ يجب اختيار حالة المركبة'); return; }
-        if (!fuelLevelEnd) { alert('❌ يجب اختيار مستوى الوقود'); return; }
-
-        const startOdo = trip.inspectionStart ? trip.inspectionStart.startOdometer : null;
-        if (startOdo && parseFloat(endOdometer) < startOdo) {
-            alert('❌ قراءة العداد النهائية يجب أن تكون أكبر من أو تساوي الابتدائية');
-            return;
-        }
-
-        let distance = null;
-        if (startOdo) {
-            distance = parseFloat(endOdometer) - startOdo;
-        }
-
-        trip.inspectionEnd = {
-            endOdometer: parseFloat(endOdometer),
-            vehicleCondition: vehicleCondition,
-            fuel: fuelLevelEnd,
-            notes: endNotes || null,
-            inspectedAt: now,
-            inspectedBy: currentUser.employeeId
-        };
-        trip.distance = distance;
-        trip.status = 'completed';
-        trip.statusLabel = 'مكتملة';
-        trip.completedAt = now;
-        trip.completedBy = currentUser.employeeId;
-        trip.completedByName = currentUser.name;
-
-        saveAndRefresh(allRequests);
-        closeModal();
-        showToast('✅ تم إكمال الطلب بنجاح');
-    }
-
-    // ============ الإبلاغ عن عطل ============
-    else if (currentAction === 'issue') {
-        const issueType = document.getElementById('issueType').value;
-        const issueNotes = document.getElementById('issueNotes').value.trim();
-
-        if (!issueType) { alert('❌ يجب اختيار نوع المشكلة'); return; }
-
-        // حفظ المرحلة اللي كان فيها السائق
-        trip.issueStage = trip.status;
-
-        // تسجيل البلاغ
-        trip.status = 'issue_reported';
-        trip.statusLabel = '⚠️ بلاغ عطل';
-        trip.issueType = issueType;
-        trip.issueNotes = issueNotes || null;
-        trip.issueReportedAt = now;
-        trip.issueReportedBy = currentUser.employeeId;
-        trip.issueReportedByName = currentUser.name;
-
-        saveAndRefresh(allRequests);
-        closeModal();
-        showToast('🚨 تم الإبلاغ — جاري إشعار المنفذ');
-    }
-});
-
-// ==================== حفظ وتحديث ====================
-function saveAndRefresh(allRequests) {
-    localStorage.setItem('transportRequests', JSON.stringify(allRequests));
-    loadTrips();
-    updateStats();
-    renderTrips();
-}
-
-// ==================== إشعار سريع ====================
-function showToast(message) {
-    const toast = document.createElement('div');
-    toast.style.cssText = `
-        position: fixed;
-        bottom: 30px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #1f2937;
-        color: white;
-        padding: 14px 24px;
-        border-radius: 50px;
-        font-size: 14px;
-        font-weight: 600;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        z-index: 2000;
-        animation: slideUp 0.3s;
-        direction: rtl;
-        font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
-        text-align: center;
-        max-width: 90%;
-    `;
-    toast.textContent = message;
-    document.body.appendChild(toast);
-
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(() => toast.remove(), 300);
-    }, 2500);
-}
-
-// ==================== الأحداث ====================
-document.addEventListener('DOMContentLoaded', function () {
-    document.getElementById('driverName').textContent = currentUser.name || 'السائق';
-    document.getElementById('driverId').textContent = 'رقم الموظف: ' + (currentUser.employeeId || '-');
-
-    loadTrips();
-    updateStats();
-    renderTrips();
-
-    document.querySelectorAll('.filter-btn').forEach(btn => {
-        btn.addEventListener('click', function () {
-            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            currentFilter = this.dataset.filter;
-            renderTrips();
-        });
-    });
-});
-
-// ==================== رجوع ====================
-function goBack() {
-    window.location.href = 'index.html';
-}
+        showToast
