@@ -13,20 +13,39 @@ let currentFilter = 'pending_approval';
 let currentAction = null;
 let currentRequestNumber = null;
 
-// قوائم السائقين والمركبات
-const AVAILABLE_DRIVERS = [
-    { id: '4001', name: 'سعد السائق' },
-    { id: '4002', name: 'فهد السائق' },
-    { id: '4003', name: 'ماجد السائق' }
-];
+// ==================== تحميل السائقين والمركبات (من التخزين) ====================
+let AVAILABLE_DRIVERS = [];
+let AVAILABLE_VEHICLES = [];
 
-const AVAILABLE_VEHICLES = [
-    { number: 'V001', name: 'تويوتا كامري', type: 'Sedan' },
-    { number: 'V002', name: 'هيونداي توسان', type: 'SUV' },
-    { number: 'V003', name: 'نيسان باترول', type: 'SUV' },
-    { number: 'V004', name: 'تويوتا هايلكس', type: 'Truck' },
-    { number: 'V005', name: 'مرسيدس سبرينتر', type: 'Bus' }
-];
+function loadDriversAndVehicles() {
+    // السائقين
+    const storedDrivers = localStorage.getItem('transportDrivers');
+    if (storedDrivers) {
+        AVAILABLE_DRIVERS = JSON.parse(storedDrivers).filter(d => d.active);
+    } else {
+        // افتراضي
+        AVAILABLE_DRIVERS = [
+            { id: '4001', name: 'سعد السائق', active: true },
+            { id: '4002', name: 'فهد السائق', active: true },
+            { id: '4003', name: 'ماجد السائق', active: true }
+        ];
+    }
+
+    // المركبات
+    const storedVehicles = localStorage.getItem('transportVehicles');
+    if (storedVehicles) {
+        AVAILABLE_VEHICLES = JSON.parse(storedVehicles).filter(v => v.active !== false);
+    } else {
+        // افتراضي
+        AVAILABLE_VEHICLES = [
+            { number: 'V001', name: 'تويوتا كامري', type: 'Sedan' },
+            { number: 'V002', name: 'هيونداي توسان', type: 'SUV' },
+            { number: 'V003', name: 'نيسان باترول', type: 'SUV' },
+            { number: 'V004', name: 'تويوتا هايلكس', type: 'Truck' },
+            { number: 'V005', name: 'مرسيدس سبرينتر', type: 'Bus' }
+        ];
+    }
+}
 
 // ==================== عناصر الصفحة ====================
 const requestsList = document.getElementById('requestsList');
@@ -59,7 +78,6 @@ function updateStats() {
 
 // ==================== الشريط الأحمر للبلاغات ====================
 function buildAlertsBar() {
-    // احذف الشريط القديم لو موجود
     const oldBar = document.getElementById('alertsBar');
     if (oldBar) oldBar.remove();
 
@@ -111,7 +129,6 @@ function buildAlertsBar() {
         bar.style.transform = 'scale(1)';
     });
 
-    // أضف الشريط قبل قائمة الطلبات
     const container = document.querySelector('.container');
     const filterBar = document.querySelector('.filter-bar');
     if (filterBar) {
@@ -186,7 +203,6 @@ function createRequestCard(request) {
     const hasVehicle = !!request.assignedVehicle;
     const isReadyToApprove = hasDriver && hasVehicle;
 
-    // بيانات التعيين
     let assignmentInfo = '';
     if (hasDriver || hasVehicle) {
         assignmentInfo = `
@@ -198,7 +214,6 @@ function createRequestCard(request) {
         `;
     }
 
-    // تنبيه البلاغ
     let issueAlert = '';
     if (request.status === 'issue_reported') {
         const issueTypes = {
@@ -220,14 +235,12 @@ function createRequestCard(request) {
         `;
     }
 
-    // السبب
     const reasonNote = request.reason ? `
         <div style="background: #fef3c7; padding: 10px 14px; border-radius: 10px; margin-top: 12px; font-size: 13px; color: #92400e;">
             <strong>📝 السبب:</strong> ${request.reason}
         </div>
     ` : '';
 
-    // أزرار الإجراءات
     let actionButtons = '';
     if (request.status === 'pending_approval') {
         const approveBtn = isReadyToApprove
@@ -540,6 +553,7 @@ function showToast(message) {
 
 // ==================== الأحداث ====================
 document.addEventListener('DOMContentLoaded', function () {
+    loadDriversAndVehicles();
     loadRequests();
     updateStats();
     buildAlertsBar();
