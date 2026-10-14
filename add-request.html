@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إضافة طلب نقل - نظام إدارة النقل</title>
+    <link rel="stylesheet" href="add-request.css">
+</head>
+<body>
+    <!-- الشريط العلوي -->
+    <header class="top-bar">
+        <button class="btn-back" onclick="goBack()">←</button>
+        <h1>إضافة طلب نقل</h1>
+        <div class="spacer"></div>
+    </header>
+
+    <!-- المحتوى -->
+    <main class="container">
+        <form id="requestForm" class="request-form">
+            
+            <!-- القسم 1: معلومات الطلب -->
+            <div class="form-section">
+                <h2 class="section-header">📋 معلومات الطلب</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="requestDate">تاريخ التنفيذ <span class="required">*</span></label>
+                        <input type="date" id="requestDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="requestTime">وقت التنفيذ <span class="required">*</span></label>
+                        <input type="time" id="requestTime" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="department">الإدارة الطالبة <span class="required">*</span></label>
+                    <select id="department" required>
+                        <option value="">-- اختر الإدارة --</option>
+                        <option value="HR">الموارد البشرية</option>
+                        <option value="IT">تقنية المعلومات</option>
+                        <option value="FIN">الإدارة المالية</option>
+                        <option value="OPS">العمليات</option>
+                        <option value="MNT">الصيانة</option>
+                        <option value="SEC">الأمن</option>
+                        <option value="MED">الشؤون الطبية</option>
+                        <option value="ADM">الإدارة العامة</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="requesterId">رقم الموظف الطالب <span class="required">*</span></label>
+                    <input type="text" id="requesterId" placeholder="مثال: 1001" required>
+                </div>
+            </div>
+
+            <!-- القسم 2: مسار الرحلة -->
+            <div class="form-section">
+                <h2 class="section-header">🗺️ مسار الرحلة</h2>
+
+                <div class="form-group">
+                    <label for="pickupLocation">مكان الالتقاط <span class="required">*</span></label>
+                    <input type="text" id="pickupLocation" placeholder="مثال: المبنى الرئيسي - البوابة A" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="destination">الوجهة <span class="required">*</span></label>
+                    <input type="text" id="destination" placeholder="مثال: فرع الرياض الشمالي" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="passengers">عدد الركاب <span class="required">*</span></label>
+                    <input type="number" id="passengers" min="1" max="50" value="1" required>
+                </div>
+            </div>
+
+            <!-- القسم 3: المركبة والسائق -->
+            <div class="form-section">
+                <h2 class="section-header">🚗 المركبة والسائق</h2>
+
+                <div class="form-group">
+                    <label for="vehicleType">نوع المركبة المطلوب <span class="required">*</span></label>
+                    <select id="vehicleType" required>
+                        <option value="">-- اختر نوع المركبة --</option>
+                        <option value="Sedan">Sedan - سيدان</option>
+                        <option value="SUV">SUV - دفع رباعي</option>
+                        <option value="Ambulance">Ambulance - إسعاف</option>
+                        <option value="Truck">Truck - شاحنة</option>
+                        <option value="Bus">Bus - باص</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="proposedDriver">السائق المقترح (اختياري)</label>
+                    <select id="proposedDriver">
+                        <option value="">-- سيتم التحديد من قبل المنفذ --</option>
+                        <option value="4001">سعد السائق - 4001</option>
+                        <option value="4002">فهد السائق - 4002</option>
+                        <option value="4003">ماجد السائق - 4003</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="proposedVehicle">المركبة المقترحة (اختياري)</label>
+                    <select id="proposedVehicle">
+                        <option value="">-- سيتم التحديد من قبل المنفذ --</option>
+                        <option value="V001">V001 - تويوتا كامري</option>
+                        <option value="V002">V002 - هيونداي توسان</option>
+                        <option value="V003">V003 - نيسان باترول</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- القسم 4: التواصل والملاحظات -->
+            <div class="form-section">
+                <h2 class="section-header">📞 التواصل والملاحظات</h2>
+
+                <div class="form-group">
+                    <label for="contactNumber">رقم التواصل <span class="required">*</span></label>
+                    <input 
+                        type="tel" 
+                        id="contactNumber" 
+                        placeholder="05xxxxxxxx" 
+                        pattern="[0-9]{10}"
+                        maxlength="10"
+                        required
+                    >
+                    <small class="hint">10 أرقام فقط</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="notes">ملاحظات إضافية (اختياري)</label>
+                    <textarea 
+                        id="notes" 
+                        rows="4" 
+                        placeholder="أي تفاصيل إضافية عن الطلب..."
+                    ></textarea>
+                </div>
+            </div>
+
+            <!-- رسالة الحالة -->
+            <div id="statusMessage" class="status-message"></div>
+
+            <!-- الأزرار -->
+            <div class="form-actions">
+                <button type="button" class="btn-cancel" onclick="goBack()">
+                    إلغاء
+                </button>
+                <button type="submit" class="btn-submit">
+                    💾 حفظ الطلب
+                </button>
+            </div>
+
+        </form>
+    </main>
+
+    <script src="add-request.js"></script>
+</body>
+</html>
