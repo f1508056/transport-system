@@ -63,12 +63,10 @@ function updateStats() {
 function getFilteredVehicles() {
     let filtered = allVehicles;
 
-    // تصفية حسب الحالة
     if (currentFilter !== 'all') {
         filtered = filtered.filter(v => v.status === currentFilter);
     }
 
-    // تصفية حسب البحث
     if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
         filtered = filtered.filter(v =>
@@ -352,10 +350,20 @@ modalConfirmBtn.addEventListener('click', function () {
     // ============ حذف ============
     if (modalTitleText.includes('حذف')) {
         if (!currentEditNumber) return;
+        const deletedVehicle = allVehicles.find(v => v.number === currentEditNumber);
         allVehicles = allVehicles.filter(v => v.number !== currentEditNumber);
         saveVehicles();
         updateStats();
         renderVehicles();
+
+        // 📜 تسجيل الحدث
+        logAudit('vehicle', 'حذف مركبة', currentEditNumber, {
+            newValues: { 
+                status: 'محذوفة', 
+                vehicle: (deletedVehicle?.make || '') + ' ' + (deletedVehicle?.model || '')
+            }
+        });
+
         closeModal();
         showToast('🗑️ تم حذف المركبة');
         return;
@@ -370,10 +378,18 @@ modalConfirmBtn.addEventListener('click', function () {
         const vehicle = allVehicles.find(v => v.number === currentEditNumber);
         if (!vehicle) return;
 
+        const oldStatus = vehicle.status;
         vehicle.status = selected.value;
         saveVehicles();
         updateStats();
         renderVehicles();
+
+        // 📜 تسجيل الحدث
+        logAudit('vehicle', 'تغيير حالة مركبة', currentEditNumber, {
+            oldValues: { status: getStatusLabel(oldStatus) },
+            newValues: { status: getStatusLabel(vehicle.status) }
+        });
+
         closeModal();
         showToast('✅ تم تحديث حالة المركبة');
         return;
@@ -392,7 +408,6 @@ modalConfirmBtn.addEventListener('click', function () {
     if (!type) { alert('❌ يجب اختيار نوع المركبة'); return; }
     if (!plate) { alert('❌ يجب إدخال لوحة التسجيل'); return; }
 
-    // تحقق من تكرار اللوحة
     const plateExists = allVehicles.find(v => 
         v.plate === plate && v.number !== currentEditNumber
     );
@@ -423,6 +438,15 @@ modalConfirmBtn.addEventListener('click', function () {
         saveVehicles();
         updateStats();
         renderVehicles();
+
+        // 📜 تسجيل الحدث
+        logAudit('vehicle', 'إضافة مركبة جديدة', number, {
+            newValues: { 
+                status: 'متاحة', 
+                vehicle: (make || '') + ' ' + (model || '') + ' (' + plate + ')'
+            }
+        });
+
         closeModal();
         showToast('✅ تم إضافة المركبة بنجاح');
     }
@@ -432,6 +456,8 @@ modalConfirmBtn.addEventListener('click', function () {
         const vehicle = allVehicles.find(v => v.number === currentEditNumber);
         if (!vehicle) return;
 
+        const oldVehicleDesc = (vehicle.make || '') + ' ' + (vehicle.model || '') + ' | ' + vehicle.type + ' | ' + (vehicle.color || '-') + ' | ' + (vehicle.year || '-') + ' | ' + vehicle.plate;
+
         vehicle.type = type;
         vehicle.make = make || null;
         vehicle.model = model || null;
@@ -439,9 +465,18 @@ modalConfirmBtn.addEventListener('click', function () {
         vehicle.year = year ? parseInt(year) : null;
         vehicle.plate = plate;
 
+        const newVehicleDesc = (make || '') + ' ' + (model || '') + ' | ' + type + ' | ' + (color || '-') + ' | ' + (year || '-') + ' | ' + plate;
+
         saveVehicles();
         updateStats();
         renderVehicles();
+
+        // 📜 تسجيل الحدث
+        logAudit('vehicle', 'تعديل بيانات مركبة', currentEditNumber, {
+            oldValues: { vehicle: oldVehicleDesc },
+            newValues: { vehicle: newVehicleDesc }
+        });
+
         closeModal();
         showToast('✅ تم حفظ التعديلات');
     }
